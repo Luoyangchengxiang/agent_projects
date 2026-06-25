@@ -1,0 +1,73 @@
+/**
+ * 环状菜单样式
+ */
+
+.radial-menu {
+  position: fixed;
+  z-index: 1001;
+  pointer-events: none;
+}
+
+.radial-menu-center {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(0, 212, 255, 0.2);
+  border: 2px solid rgba(0, 212, 255, 0.4);
+  transform: translate(-50%, -50%);
+  left: 0;
+  top: 0;
+}
+
+.radial-menu-item {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 52px;
+  height: 52px;
+  margin-left: -26px;
+  margin-top: -26px;
+  border-radius: 50%;
+  border: 2px solid var(--item-color, #00d4ff);
+  background: rgba(26, 26, 46, 0.95);
+  color: var(--item-color, #00d4ff);
+  cursor: pointer;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  transition: all 0.2s ease;
+  animation: radialItemIn 0.3s ease backwards;
+  backdrop-filter: blur(8px);
+}
+
+.radial-menu-item:hover {
+  transform: var(--base-transform, translate(0, 0)) scale(1.15) !important;
+  background: var(--item-color, #00d4ff);
+  color: white;
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+}
+
+.radial-menu-item-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.radial-menu-item-label {
+  font-size: 9px;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+@keyframes radialItemIn {
+  from {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.3);
+  }
+  to {
+    opacity: 1;
+  }
+}

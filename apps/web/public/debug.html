@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>登录调试</title>
+  <style>
+    body { font-family: monospace; background: #1a1a2e; color: #eee; padding: 20px; }
+    .result { background: #16213e; padding: 10px; margin: 10px 0; border-radius: 5px; }
+    .success { border-left: 3px solid #4ade80; }
+    .error { border-left: 3px solid #f87171; }
+    button { background: #6366f1; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <h1>Agent Monitor 登录调试</h1>
+  <div id="output"></div>
+  <button onclick="testLogin()">测试登录</button>
+
+  <script>
+    const output = document.getElementById('output');
+    
+    function log(msg, type = 'info') {
+      const div = document.createElement('div');
+      div.className = `result ${type}`;
+      div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      output.appendChild(div);
+    }
+
+    async function testLogin() {
+      output.innerHTML = '';
+      
+      // 1. 测试 API 连接
+      log('1. 测试 API 连接...');
+      try {
+        const testRes = await fetch('/api/test');
+        const testData = await testRes.json();
+        log(`API 连接正常: ${testData.message}`, 'success');
+      } catch (e) {
+        log(`API 连接失败: ${e.message}`, 'error');
+        return;
+      }
+
+      // 2. 测试登录
+      log('2. 测试登录...');
+      try {
+        const loginRes = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: 'admin', password: '123456' })
+        });
+        const loginData = await loginRes.json();
+        
+        if (loginData.success) {
+          log(`登录成功! Token: ${loginData.data.token.substring(0, 20)}...`, 'success');
+          
+          // 保存 token
+          localStorage.setItem('auth_token', loginData.data.token);
+          localStorage.setItem('auth_user', JSON.stringify(loginData.data.user));
+          log('Token 已保存到 localStorage', 'success');
+          
+          // 3. 测试获取用户信息
+          log('3. 测试获取用户信息...');
+          const meRes = await fetch('/api/auth/me', {
+            headers: { 'Authorization': `Bearer ${loginData.data.token}` }
+          });
+          const meData = await meRes.json();
+          
+          if (meData.success) {
+            log(`用户信息获取成功: ${meData.data.user.name}`, 'success');
+            log('✅ 登录流程测试通过! 请刷新主页', 'success');
+          } else {
+            log(`获取用户信息失败: ${meData.message}`, 'error');
+          }
+        } else {
+          log(`登录失败: ${loginData.message}`, 'error');
+        }
+      } catch (e) {
+        log(`登录请求失败: ${e.message}`, 'error');
+      }
+    }
+
+    // 检查 localStorage
+    const existingToken = localStorage.getItem('auth_token');
+    if (existingToken) {
+      log(`发现已保存的 Token: ${existingToken.substring(0, 20)}...`, 'info');
+    }
+  </script>
+</body>
+</html>

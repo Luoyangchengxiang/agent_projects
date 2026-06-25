@@ -1,0 +1,140 @@
+/**
+ * 看板娘选择页面样式
+ */
+
+.mascot-select {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-primary, #0a0a0f);
+  padding: 20px;
+}
+
+.mascot-select-container {
+  max-width: 800px;
+  width: 100%;
+}
+
+.mascot-select-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.mascot-select-header h1 {
+  font-size: 28px;
+  color: var(--text-primary, #e0e0e0);
+  margin-bottom: 8px;
+}
+
+.mascot-select-header p {
+  font-size: 14px;
+  color: var(--text-secondary, #888);
+}
+
+/* 形象网格 */
+.mascot-select-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.mascot-select-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 12px;
+  border-radius: 12px;
+  background: var(--bg-card, #1a1a2e);
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.mascot-select-card:hover {
+  border-color: rgba(0, 212, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.mascot-select-card--selected {
+  border-color: var(--color-primary, #00d4ff);
+  background: rgba(0, 212, 255, 0.08);
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.15);
+}
+
+.mascot-select-card-emoji {
+  font-size: 36px;
+  line-height: 1;
+}
+
+.mascot-select-card-name {
+  font-size: 13px;
+  color: var(--text-primary, #e0e0e0);
+  text-align: center;
+}
+
+.mascot-select-card-check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-primary, #00d4ff);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  animation: mascotCheckIn 0.3s ease;
+}
+
+@keyframes mascotCheckIn {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
+
+/* 确认按钮 */
+.mascot-select-footer {
+  text-align: center;
+}
+
+.mascot-select-confirm {
+  padding: 14px 40px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #00d4ff, #0099cc);
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mascot-select-confirm:hover:not(:disabled) {
+  transform: scale(1.02);
+  box-shadow: 0 4px 20px rgba(0, 212, 255, 0.3);
+}
+
+.mascot-select-confirm--disabled {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary, #888);
+  cursor: not-allowed;
+}
+
+.mascot-select-confirm--done {
+  background: linear-gradient(135deg, #52c41a, #389e0d);
+  animation: mascotConfirmDone 0.5s ease;
+}
+
+@keyframes mascotConfirmDone {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}

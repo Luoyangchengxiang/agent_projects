@@ -1,0 +1,139 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  /* 按钮组件 */
+  .btn {
+    @apply inline-flex items-center justify-center 
+           px-4 py-2 rounded-md 
+           font-medium text-sm 
+           transition-all duration-200 
+           focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary text-white 
+           hover:bg-primary-hover 
+           focus:ring-primary;
+  }
+
+  .btn-secondary {
+    @apply btn bg-surface text-primary 
+           border border-primary 
+           hover:bg-elevated 
+           focus:ring-primary;
+  }
+
+  .btn-ghost {
+    @apply btn text-secondary 
+           hover:text-primary hover:bg-surface 
+           focus:ring-primary;
+  }
+
+  /* 卡片组件 */
+  .card {
+    @apply bg-card rounded-lg 
+           border border-white/5 
+           shadow-md;
+  }
+
+  .card-header {
+    @apply px-6 py-4 
+           border-b border-white/5;
+  }
+
+  .card-body {
+    @apply px-6 py-4;
+  }
+
+  .card-footer {
+    @apply px-6 py-4 
+           border-t border-white/5;
+  }
+
+  /* 输入框组件 */
+  .input {
+    @apply w-full px-4 py-2 
+           bg-surface text-primary 
+           border border-white/10 
+           rounded-md 
+           focus:outline-none focus:border-primary 
+           focus:ring-1 focus:ring-primary 
+           placeholder:text-muted;
+  }
+
+  /* 标签组件 */
+  .tag {
+    @apply inline-flex items-center 
+           px-2.5 py-0.5 
+           rounded-full 
+           text-xs font-medium;
+  }
+
+  .tag-success {
+    @apply tag bg-success text-white;
+  }
+
+  .tag-warning {
+    @apply tag bg-warning text-white;
+  }
+
+  .tag-error {
+    @apply tag bg-error text-white;
+  }
+
+  .tag-info {
+    @apply tag bg-info text-white;
+  }
+
+  /* 布局组件 */
+  .page-container {
+    @apply min-h-screen bg-base text-primary;
+  }
+
+  .sidebar {
+    @apply fixed left-0 top-0 
+           w-64 h-screen 
+           bg-surface 
+           border-r border-white/5 
+           z-50;
+  }
+
+  .main-content {
+    @apply ml-64 min-h-screen;
+  }
+
+  .header {
+    @apply sticky top-0 
+           h-16 
+           bg-surface 
+           backdrop-blur-sm 
+           border-b border-white/5 
+           z-40;
+  }
+
+  /* 网格布局 */
+  .grid-dashboard {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6;
+  }
+
+  .grid-detail {
+    @apply grid grid-cols-1 lg:grid-cols-3 gap-6;
+  }
+
+  /* 状态样式 */
+  .loading {
+    @apply animate-pulse bg-surface rounded;
+  }
+
+  .disabled {
+    @apply opacity-50 cursor-not-allowed pointer-events-none;
+  }
+
+  .hoverable {
+    @apply transition-all duration-200 
+           hover:bg-elevated 
+           hover:shadow-lg;
+  }
+}
