@@ -122,4 +122,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{cronjob}/run', [App\Http\Controllers\CronJobController::class, 'run']);
         Route::get('/{cronjob}/logs', [App\Http\Controllers\CronJobController::class, 'logs']);
     });
+
+    // ==================== 版本更新 ====================
+    Route::prefix('version-updates')->group(function () {
+        Route::get('/', [App\Http\Controllers\VersionUpdateController::class, 'index']);
+        Route::get('/latest', [App\Http\Controllers\VersionUpdateController::class, 'latest']);
+        Route::post('/', [App\Http\Controllers\VersionUpdateController::class, 'store']);
+        Route::put('/{versionUpdate}', [App\Http\Controllers\VersionUpdateController::class, 'update']);
+        Route::delete('/{versionUpdate}', [App\Http\Controllers\VersionUpdateController::class, 'destroy']);
+    });
 });

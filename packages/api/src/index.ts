@@ -160,6 +160,34 @@ export const dashboardApi = {
   }
 }
 
+// 版本更新相关API
+export const versionUpdateApi = {
+  // 获取版本更新列表
+  getList(params?: PaginationParams & { type?: string; highlight_only?: boolean }): Promise<ApiResponse<PaginatedResponse<any>>> {
+    return api.get('/version-updates', { params })
+  },
+
+  // 获取最新版本（用于通知中心）
+  getLatest(): Promise<ApiResponse<any[]>> {
+    return api.get('/version-updates/latest')
+  },
+
+  // 创建版本更新（管理员）
+  create(data: { version: string; title: string; content: string; type?: string; release_date: string; is_highlight?: boolean }): Promise<ApiResponse<any>> {
+    return api.post('/version-updates', data)
+  },
+
+  // 更新版本记录（管理员）
+  update(id: number, data: Partial<any>): Promise<ApiResponse<any>> {
+    return api.put(`/version-updates/${id}`, data)
+  },
+
+  // 删除版本记录（管理员）
+  delete(id: number): Promise<ApiResponse<void>> {
+    return api.delete(`/version-updates/${id}`)
+  }
+}
+
 // 权限管理相关API
 export const permissionApi = {
   // 获取当前用户权限信息

@@ -17,7 +17,7 @@ import {
   RightOutlined
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
-import { executionLogApi, errorLogApi } from '@agent-monitor/api'
+import { executionLogApi, errorLogApi, versionUpdateApi } from '@agent-monitor/api'
 
 export default function NotificationPanel({ open, onClose, onUnreadChange }) {
   const { message } = App.useApp()
@@ -84,9 +84,10 @@ export default function NotificationPanel({ open, onClose, onUnreadChange }) {
   const loadNotifications = async () => {
     setLoading(true)
     try {
-      const [executionsRes, errorsRes] = await Promise.all([
+      const [executionsRes, errorsRes, updatesRes] = await Promise.all([
         executionLogApi.getList({ page: 1, per_page: 10 }).catch(() => ({ data: { data: [] } })),
-        errorLogApi.getList({ page: 1, per_page: 10, status: 'open' }).catch(() => ({ data: { data: [] } }))
+        errorLogApi.getList({ page: 1, per_page: 10, status: 'open' }).catch(() => ({ data: { data: [] } })),
+        versionUpdateApi.getLatest().catch(() => ({ data: { data: [] } }))
       ])
 
       setNotifications({
@@ -95,10 +96,17 @@ export default function NotificationPanel({ open, onClose, onUnreadChange }) {
         messages: [
           { id: 1, content: '欢迎使用 Agent 监控系统！', time: '2026-06-26 10:00' },
         ],
-        updates: [
-          { id: 1, version: 'v1.2.0', content: '新增看板娘拖拽功能、消息中心', time: '2026-06-26' },
-          { id: 2, version: 'v1.1.0', content: '新增执行结果汇总、Markdown 渲染', time: '2026-06-25' },
-        ]
+        updates: (updatesRes.data?.data || []).map(item => ({
+          id: item.id,
+          version: item.version,
+          content: item.title,
+          detail: item.content,
+          type: item.type,
+          type_label: item.type_label,
+          type_color: item.type_color,
+          time: item.release_date,
+          is_highlight: item.is_highlight,
+        }))
       })
     } catch (error) {
       console.error('加载通知失败:', error)
@@ -291,14 +299,38 @@ export default function NotificationPanel({ open, onClose, onUnreadChange }) {
               style={{ cursor: 'pointer' }}
             >
               <div className="notification-icon">
-                <InfoCircleOutlined style={{ color: '#722ed1' }} />
+                <InfoCircleOutlined style={{ color: item.type_color || '#722ed1' }} />
               </div>
               <div className="notification-content">
                 <div className="notification-title">
                   {item.version}
-                  {!isRead && <Badge status="processing" style={{ marginLeft: 8 }} />}
+                  {item.type_label && (
+                    <Tag color={item.type_color} style={{ marginLeft: 8, fontSize: 11 }}>
+                      {item.type_label}
+                    </Tag>
+                  )}
+                  {item.is_highlight && (
+                    <Tag color="gold" style={{ marginLeft: 4, fontSize: 11 }}>
+                      重要
+                    </Tag>
+                  )}
+                  {!isRead && <Badge status="processing" style={{ marginLeft: 4 }} />}
                 </div>
-                <div className="notification-desc">{item.content}</div>
+                <div className="notification-desc" style={{ fontWeight: 500 }}>
+                  {item.content}
+                </div>
+                {item.detail && (
+                  <div className="notification-desc" style={{ 
+                    fontSize: 12, 
+                    color: '#8b8b8b',
+                    marginTop: 4,
+                    whiteSpace: 'pre-line',
+                    maxHeight: 60,
+                    overflow: 'hidden'
+                  }}>
+                    {item.detail}
+                  </div>
+                )}
                 <div className="notification-time">
                   <ClockCircleOutlined /> {item.time}
                 </div>
