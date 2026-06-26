@@ -88,38 +88,36 @@ function App({ onReady }) {
 
   return (
     <ErrorBoundary>
-      <Suspense fallback={null}>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
 
-          {/* 看板娘选择（登录后、首次使用时） */}
-          <Route
-            path="/select-mascot"
-            element={
-              <ProtectedRoute>
-                <MascotSelect />
-              </ProtectedRoute>
-            }
-          />
+        {/* 看板娘选择（登录后、首次使用时） */}
+        <Route
+          path="/select-mascot"
+          element={
+            <ProtectedRoute>
+              <MascotSelect />
+            </ProtectedRoute>
+          }
+        />
 
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <MainLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<Dashboard />} />
-            <Route path="agents" element={<AgentList />} />
-            <Route path="logs" element={<ExecutionLogs />} />
-            <Route path="errors" element={<ErrorLogs />} />
-            <Route path="chat" element={<ChatAdmin />} />
-            <Route path="permissions" element={<PermissionManagement />} />
-          </Route>
-        </Routes>
-      </Suspense>
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <MainLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Dashboard />} />
+          <Route path="agents" element={<AgentList />} />
+          <Route path="logs" element={<ExecutionLogs />} />
+          <Route path="errors" element={<ErrorLogs />} />
+          <Route path="chat" element={<ChatAdmin />} />
+          <Route path="permissions" element={<PermissionManagement />} />
+        </Route>
+      </Routes>
     </ErrorBoundary>
   )
 }
