@@ -41,7 +41,7 @@ function MainLayout() {
       <Sidebar />
       <div className="main-content">
         <Header />
-        <main className="p-6">
+        <main className="p-6" style={{ height: 'calc(100vh - 64px)', overflow: 'auto' }}>
           <Suspense fallback={<ContentLoading />}>
             <Outlet />
           </Suspense>
