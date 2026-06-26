@@ -14,6 +14,9 @@ import {
   message,
   Modal,
   Form,
+  Switch,
+  Tooltip,
+  Badge,
 } from 'antd'
 import {
   PlusOutlined,
@@ -22,6 +25,8 @@ import {
   NodeIndexOutlined,
   ApartmentOutlined,
   ReloadOutlined,
+  PauseCircleOutlined,
+  PlayCircleOutlined,
 } from '@ant-design/icons'
 import { graphApi } from '../services/graphApi'
 
@@ -46,6 +51,17 @@ const EDGE_TYPES = {
   collaborates: { label: '协作', color: '#ec4899' },
 }
 
+// 模拟节点运行状态（实际项目中应从后端获取）
+const getNodeStatus = (node) => {
+  // 这里模拟一些节点处于"运行中"状态
+  // 实际项目中应该从 API 获取真实的运行状态
+  const runningAgents = [1, 2, 3] // 模拟运行中的 Agent ID
+  if (node.type === 'agent' && runningAgents.includes(node.id)) {
+    return 'running'
+  }
+  return 'idle'
+}
+
 function KnowledgeGraph() {
   const [loading, setLoading] = useState(false)
   const [graphData, setGraphData] = useState({ nodes: [], edges: [] })
@@ -57,30 +73,52 @@ function KnowledgeGraph() {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [addNodeVisible, setAddNodeVisible] = useState(false)
   const [addEdgeVisible, setAddEdgeVisible] = useState(false)
+  const [autoRefresh, setAutoRefresh] = useState(true)
+  const [refreshInterval, setRefreshInterval] = useState(10) // 秒
+  const [lastRefresh, setLastRefresh] = useState(null)
   const [form] = Form.useForm()
   const [edgeForm] = Form.useForm()
   const chartRef = useRef(null)
   const containerRef = useRef(null)
+  const refreshTimerRef = useRef(null)
+  const animationFrameRef = useRef(null)
 
   // 加载图谱数据
-  const loadGraphData = useCallback(async () => {
-    setLoading(true)
+  const loadGraphData = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true)
     try {
       const res = await graphApi.getData({ type: filterType })
       if (res.success) {
         setGraphData(res.data)
+        setLastRefresh(new Date())
       }
     } catch (error) {
       console.error('加载图谱数据失败:', error)
-      message.error('加载失败')
+      if (showLoading) message.error('加载失败')
     } finally {
-      setLoading(false)
+      if (showLoading) setLoading(false)
     }
   }, [filterType])
 
+  // 初始加载
   useEffect(() => {
     loadGraphData()
   }, [loadGraphData])
+
+  // 自动刷新
+  useEffect(() => {
+    if (autoRefresh) {
+      refreshTimerRef.current = setInterval(() => {
+        loadGraphData(false) // 静默刷新，不显示 loading
+      }, refreshInterval * 1000)
+    }
+
+    return () => {
+      if (refreshTimerRef.current) {
+        clearInterval(refreshTimerRef.current)
+      }
+    }
+  }, [autoRefresh, refreshInterval, loadGraphData])
 
   // 监听全屏状态变化
   useEffect(() => {
@@ -149,6 +187,9 @@ function KnowledgeGraph() {
 
     const chartNodes = nodes.map(node => {
       const typeConfig = NODE_TYPES[node.type] || NODE_TYPES.agent
+      const status = getNodeStatus(node)
+      const isRunning = status === 'running'
+      
       return {
         id: node.id.toString(),
         name: node.name,
@@ -157,10 +198,10 @@ function KnowledgeGraph() {
         category: Object.keys(NODE_TYPES).indexOf(node.type),
         itemStyle: {
           color: typeConfig.color,
-          borderColor: '#1a1a2e',
-          borderWidth: 2,
-          shadowBlur: 10,
-          shadowColor: typeConfig.color,
+          borderColor: isRunning ? '#10b981' : '#1a1a2e',
+          borderWidth: isRunning ? 3 : 2,
+          shadowBlur: isRunning ? 20 : 10,
+          shadowColor: isRunning ? '#10b981' : typeConfig.color,
         },
         label: {
           show: true,
@@ -172,6 +213,8 @@ function KnowledgeGraph() {
             return name.length > 8 ? name.substring(0, 8) + '...' : name
           },
         },
+        // 添加状态标记
+        status: status,
         ...node,
       }
     })
@@ -212,12 +255,14 @@ function KnowledgeGraph() {
         textStyle: {
           color: '#e0e0e0',
         },
-        // 关键：设置 tooltip 的 z-index 低于 Modal 和 Drawer
         z: 1000,
         extraCssText: 'z-index: 1000;',
         formatter: (params) => {
           if (params.dataType === 'node') {
             const typeConfig = NODE_TYPES[params.data.type] || NODE_TYPES.agent
+            const status = params.data.status
+            const statusText = status === 'running' ? '<span style="color: #10b981;">● 运行中</span>' : '<span style="color: #9ca3af;">○ 空闲</span>'
+            
             return `
               <div style="padding: 4px 0;">
                 <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px;">
@@ -225,6 +270,9 @@ function KnowledgeGraph() {
                 </div>
                 <div style="color: #9ca3af; margin-bottom: 4px;">
                   类型: ${typeConfig.label}
+                </div>
+                <div style="margin-bottom: 4px;">
+                  状态: ${statusText}
                 </div>
                 ${params.data.description ? `<div style="color: #9ca3af; max-width: 200px; word-break: break-all;">描述: ${params.data.description}</div>` : ''}
               </div>
@@ -244,7 +292,7 @@ function KnowledgeGraph() {
         top: 10,
         right: 10,
       },
-      animationDuration: 1500,
+      animationDuration: 1000,
       animationEasingUpdate: 'quinticInOut',
       series: [{
         type: 'graph',
@@ -358,7 +406,7 @@ function KnowledgeGraph() {
     })
   }
 
-  // 全屏切换 - 使用浏览器 Fullscreen API
+  // 全屏切换
   const toggleFullscreen = async () => {
     if (!containerRef.current) return
 
@@ -381,6 +429,12 @@ function KnowledgeGraph() {
     highlightNodes([])
   }
 
+  // 格式化刷新间隔显示
+  const formatRefreshInterval = (seconds) => {
+    if (seconds < 60) return `${seconds}秒`
+    return `${Math.floor(seconds / 60)}分${seconds % 60 > 0 ? seconds % 60 + '秒' : ''}`
+  }
+
   return (
     <div 
       ref={containerRef}
@@ -394,10 +448,30 @@ function KnowledgeGraph() {
     >
       {/* 标题栏 */}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-        <h4 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
-          <ApartmentOutlined style={{ marginRight: 8 }} />
-          知识图谱
-        </h4>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <h4 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
+            <ApartmentOutlined style={{ marginRight: 8 }} />
+            知识图谱
+          </h4>
+          
+          {/* 动态状态指示器 */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Badge 
+              status={autoRefresh ? 'processing' : 'default'} 
+              text={
+                <span style={{ color: autoRefresh ? '#10b981' : '#9ca3af', fontSize: 12 }}>
+                  {autoRefresh ? '实时更新中' : '已暂停更新'}
+                </span>
+              }
+            />
+            {lastRefresh && (
+              <span style={{ color: '#6b7280', fontSize: 11 }}>
+                最后更新: {lastRefresh.toLocaleTimeString('zh-CN')}
+              </span>
+            )}
+          </div>
+        </div>
+
         <Space>
           <Button
             icon={<PlusOutlined />}
@@ -411,6 +485,19 @@ function KnowledgeGraph() {
           >
             添加关系
           </Button>
+          
+          {/* 自动刷新控制 */}
+          <Tooltip title={autoRefresh ? '暂停自动刷新' : '开启自动刷新'}>
+            <Button
+              icon={autoRefresh ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
+              onClick={() => setAutoRefresh(!autoRefresh)}
+              type={autoRefresh ? 'primary' : 'default'}
+              ghost={autoRefresh}
+            >
+              {autoRefresh ? formatRefreshInterval(refreshInterval) : '自动刷新'}
+            </Button>
+          </Tooltip>
+          
           <Button
             icon={isFullscreen ? <CompressOutlined /> : <ExpandOutlined />}
             onClick={toggleFullscreen}
@@ -446,9 +533,23 @@ function KnowledgeGraph() {
             ))}
           </Select>
 
-          <Button icon={<ReloadOutlined />} onClick={loadGraphData}>
+          <Button icon={<ReloadOutlined />} onClick={() => loadGraphData()}>
             刷新
           </Button>
+
+          {/* 刷新间隔设置 */}
+          <Select
+            value={refreshInterval}
+            onChange={setRefreshInterval}
+            style={{ width: 100 }}
+            disabled={!autoRefresh}
+          >
+            <Option value={5}>5秒</Option>
+            <Option value={10}>10秒</Option>
+            <Option value={30}>30秒</Option>
+            <Option value={60}>1分钟</Option>
+            <Option value={300}>5分钟</Option>
+          </Select>
 
           {searchResults.length > 0 && (
             <Button onClick={resetSearch}>
@@ -489,7 +590,7 @@ function KnowledgeGraph() {
         }}
         bodyStyle={{ padding: 0, height: '100%' }}
       >
-        {loading ? (
+        {loading && !graphData.nodes?.length ? (
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
             <Spin size="large" tip="加载中..." />
           </div>
@@ -502,6 +603,8 @@ function KnowledgeGraph() {
               click: handleChartClick,
             }}
             opts={{ renderer: 'canvas' }}
+            notMerge={false}
+            lazyUpdate={true}
           />
         ) : (
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
@@ -539,6 +642,26 @@ function KnowledgeGraph() {
               <span style={{ color: '#e0e0e0', fontSize: 12 }}>{config.label}</span>
             </Space>
           ))}
+          <span style={{ color: '#9ca3af', marginLeft: 8 }}>状态：</span>
+          <Space size={4}>
+            <div style={{
+              width: 12,
+              height: 12,
+              borderRadius: '50%',
+              background: '#10b981',
+              boxShadow: '0 0 10px #10b981',
+            }} />
+            <span style={{ color: '#e0e0e0', fontSize: 12 }}>运行中</span>
+          </Space>
+          <Space size={4}>
+            <div style={{
+              width: 12,
+              height: 12,
+              borderRadius: '50%',
+              background: '#6b7280',
+            }} />
+            <span style={{ color: '#e0e0e0', fontSize: 12 }}>空闲</span>
+          </Space>
         </div>
       </Card>
 
@@ -571,6 +694,12 @@ function KnowledgeGraph() {
                   </Tag>
                 </Descriptions.Item>
                 <Descriptions.Item label="名称">{selectedNode.name}</Descriptions.Item>
+                <Descriptions.Item label="状态">
+                  <Badge 
+                    status={getNodeStatus(selectedNode) === 'running' ? 'processing' : 'default'} 
+                    text={getNodeStatus(selectedNode) === 'running' ? '运行中' : '空闲'} 
+                  />
+                </Descriptions.Item>
                 {selectedNode.description && (
                   <Descriptions.Item label="描述">{selectedNode.description}</Descriptions.Item>
                 )}
