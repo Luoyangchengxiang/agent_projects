@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Table, Tag, Select, DatePicker, Space, App } from 'antd'
-import { LoadingOutlined } from '@ant-design/icons'
+import { Table, Tag, Select, DatePicker, Space, App, Button, Modal } from 'antd'
+import { LoadingOutlined, EyeOutlined } from '@ant-design/icons'
 import { executionLogApi } from '@agent-monitor/api'
 
 function ExecutionLogs() {
@@ -8,6 +8,8 @@ function ExecutionLogs() {
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState(null)
+  const [selectedLog, setSelectedLog] = useState(null)
+  const [detailVisible, setDetailVisible] = useState(false)
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 20,
@@ -105,6 +107,29 @@ function ExecutionLogs() {
       dataIndex: 'created_at',
       key: 'created_at',
       render: (text) => <span className="text-muted">{text}</span>
+    },
+    {
+      title: '结果',
+      key: 'result',
+      width: 100,
+      render: (_, record) => {
+        if (!record.result_summary && !record.output) {
+          return <span className="text-muted">-</span>
+        }
+        return (
+          <Button
+            type="link"
+            size="small"
+            icon={<EyeOutlined />}
+            onClick={() => {
+              setSelectedLog(record)
+              setDetailVisible(true)
+            }}
+          >
+            查看
+          </Button>
+        )
+      }
     }
   ]
 
@@ -154,6 +179,73 @@ function ExecutionLogs() {
           onChange={handleTableChange}
         />
       </div>
+
+      {/* 结果详情弹窗 */}
+      <Modal
+        title={`执行结果详情 - ${selectedLog?.agent?.name || '未知'}`}
+        open={detailVisible}
+        onCancel={() => {
+          setDetailVisible(false)
+          setSelectedLog(null)
+        }}
+        footer={[
+          <Button key="close" onClick={() => {
+            setDetailVisible(false)
+            setSelectedLog(null)
+          }}>
+            关闭
+          </Button>
+        ]}
+        width={800}
+      >
+        {selectedLog && (
+          <div>
+            <div className="mb-4 p-3 bg-gray-800 rounded">
+              <div className="flex justify-between text-sm text-gray-400">
+                <span>任务ID: {selectedLog.task_id}</span>
+                <span>执行时间: {selectedLog.created_at}</span>
+              </div>
+              <div className="mt-2">
+                <Tag color={selectedLog.status === 'success' ? 'success' : 'error'}>
+                  {selectedLog.status === 'success' ? '成功' : '失败'}
+                </Tag>
+                {selectedLog.duration && (
+                  <span className="ml-2 text-sm text-gray-400">
+                    耗时: {selectedLog.duration < 1000 ? `${selectedLog.duration}ms` : `${(selectedLog.duration / 1000).toFixed(1)}s`}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {selectedLog.result_summary && (
+              <div className="mb-4">
+                <h4 className="text-sm font-medium text-gray-300 mb-2">结果摘要</h4>
+                <div className="p-3 bg-gray-900 rounded text-sm text-gray-200">
+                  {selectedLog.result_summary}
+                </div>
+              </div>
+            )}
+
+            {selectedLog.output && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-300 mb-2">完整输出</h4>
+                <div className="p-3 bg-gray-900 rounded text-sm text-gray-200 max-h-96 overflow-auto whitespace-pre-wrap">
+                  {selectedLog.output}
+                </div>
+              </div>
+            )}
+
+            {selectedLog.error && (
+              <div className="mt-4">
+                <h4 className="text-sm font-medium text-red-400 mb-2">错误信息</h4>
+                <div className="p-3 bg-red-900/20 border border-red-800 rounded text-sm text-red-300">
+                  {selectedLog.error}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }
