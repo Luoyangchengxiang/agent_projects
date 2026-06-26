@@ -1,8 +1,9 @@
 /**
  * 消息中心弹框组件
  * 分类显示：执行结果、错误日志、客服消息、版本更新
+ * 支持点击详情跳转到对应页面并清除未读
  */
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Badge, Tabs, Empty, Tag, Button, App } from 'antd'
 import { 
   BellOutlined,
@@ -12,12 +13,15 @@ import {
   InfoCircleOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
-  ClockCircleOutlined
+  ClockCircleOutlined,
+  RightOutlined
 } from '@ant-design/icons'
+import { useNavigate } from 'react-router-dom'
 import { executionLogApi, errorLogApi } from '@agent-monitor/api'
 
-export default function NotificationPanel({ open, onClose }) {
+export default function NotificationPanel({ open, onClose, onUnreadChange }) {
   const { message } = App.useApp()
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('executions')
   const [loading, setLoading] = useState(false)
   const [notifications, setNotifications] = useState({
@@ -26,12 +30,7 @@ export default function NotificationPanel({ open, onClose }) {
     messages: [],
     updates: []
   })
-  const [unreadCounts, setUnreadCounts] = useState({
-    executions: 0,
-    errors: 0,
-    messages: 0,
-    updates: 0
-  })
+  const [readIds, setReadIds] = useState(new Set()) // 已读的项目ID
 
   // 加载通知数据
   useEffect(() => {
@@ -40,10 +39,28 @@ export default function NotificationPanel({ open, onClose }) {
     }
   }, [open])
 
+  // 计算未读数并通知父组件
+  const updateUnreadCount = useCallback(() => {
+    const counts = {
+      executions: notifications.executions.filter(e => !readIds.has(`exec-${e.id}`)).length,
+      errors: notifications.errors.filter(e => !readIds.has(`error-${e.id}`)).length,
+      messages: notifications.messages.filter(e => !readIds.has(`msg-${e.id}`)).length,
+      updates: notifications.updates.filter(e => !readIds.has(`update-${e.id}`)).length,
+    }
+    const total = counts.executions + counts.errors + counts.messages + counts.updates
+    if (onUnreadChange) {
+      onUnreadChange(total, counts)
+    }
+    return counts
+  }, [notifications, readIds, onUnreadChange])
+
+  useEffect(() => {
+    updateUnreadCount()
+  }, [notifications, readIds, updateUnreadCount])
+
   const loadNotifications = async () => {
     setLoading(true)
     try {
-      // 并行加载各类通知
       const [executionsRes, errorsRes] = await Promise.all([
         executionLogApi.getList({ page: 1, per_page: 10 }).catch(() => ({ data: { data: [] } })),
         errorLogApi.getList({ page: 1, per_page: 10, status: 'open' }).catch(() => ({ data: { data: [] } }))
@@ -53,28 +70,59 @@ export default function NotificationPanel({ open, onClose }) {
         executions: executionsRes.data?.data || [],
         errors: errorsRes.data?.data || [],
         messages: [
-          // 模拟客服消息
-          { id: 1, content: '欢迎使用 Agent 监控系统！', time: '2026-06-26 10:00', read: false },
+          { id: 1, content: '欢迎使用 Agent 监控系统！', time: '2026-06-26 10:00' },
         ],
         updates: [
-          // 模拟版本更新
-          { id: 1, version: 'v1.2.0', content: '新增看板娘拖拽功能、消息中心', time: '2026-06-26', read: false },
-          { id: 2, version: 'v1.1.0', content: '新增执行结果汇总、Markdown 渲染', time: '2026-06-25', read: true },
+          { id: 1, version: 'v1.2.0', content: '新增看板娘拖拽功能、消息中心', time: '2026-06-26' },
+          { id: 2, version: 'v1.1.0', content: '新增执行结果汇总、Markdown 渲染', time: '2026-06-25' },
         ]
-      })
-
-      // 计算未读数
-      setUnreadCounts({
-        executions: executionsRes.data?.data?.filter(e => !e.read)?.length || 0,
-        errors: errorsRes.data?.data?.length || 0,
-        messages: 1,
-        updates: 1
       })
     } catch (error) {
       console.error('加载通知失败:', error)
     } finally {
       setLoading(false)
     }
+  }
+
+  // 标记单条为已读
+  const markAsRead = (type, id) => {
+    setReadIds(prev => new Set([...prev, `${type}-${id}`]))
+  }
+
+  // 标记当前 tab 全部已读
+  const markTabAsRead = (tabKey) => {
+    const items = notifications[tabKey] || []
+    const prefix = {
+      executions: 'exec',
+      errors: 'error',
+      messages: 'msg',
+      updates: 'update'
+    }[tabKey]
+    setReadIds(prev => {
+      const next = new Set(prev)
+      items.forEach(item => next.add(`${prefix}-${item.id}`))
+      return next
+    })
+  }
+
+  // 点击详情跳转
+  const handleGoDetail = (type, item) => {
+    markAsRead(type, item.id)
+    switch (type) {
+      case 'exec':
+        navigate('/logs')
+        break
+      case 'error':
+        navigate('/errors')
+        break
+      case 'msg':
+        navigate('/chat')
+        break
+      case 'update':
+        // 版本更新不跳转
+        break
+    }
+    onClose()
   }
 
   // 格式化时间
@@ -93,31 +141,41 @@ export default function NotificationPanel({ open, onClose }) {
   const renderExecutions = () => (
     <div className="notification-list">
       {notifications.executions.length > 0 ? (
-        notifications.executions.map(item => (
-          <div key={item.id} className="notification-item">
-            <div className="notification-icon">
-              {item.status === 'success' ? (
-                <CheckCircleOutlined style={{ color: '#52c41a' }} />
-              ) : (
-                <CloseCircleOutlined style={{ color: '#ff4d4f' }} />
-              )}
+        notifications.executions.map(item => {
+          const isRead = readIds.has(`exec-${item.id}`)
+          return (
+            <div 
+              key={item.id} 
+              className={`notification-item ${isRead ? 'notification-item--read' : ''}`}
+              style={{ cursor: 'pointer' }}
+              onClick={() => handleGoDetail('exec', item)}
+            >
+              <div className="notification-icon">
+                {item.status === 'success' ? (
+                  <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                ) : (
+                  <CloseCircleOutlined style={{ color: '#ff4d4f' }} />
+                )}
+              </div>
+              <div className="notification-content">
+                <div className="notification-title">
+                  {item.agent?.name || `Agent-${item.agent_id}`}
+                  <Tag color={item.status === 'success' ? 'success' : 'error'} style={{ marginLeft: 8 }}>
+                    {item.status === 'success' ? '成功' : '失败'}
+                  </Tag>
+                  {!isRead && <Badge status="processing" style={{ marginLeft: 4 }} />}
+                </div>
+                <div className="notification-desc">
+                  {item.result_summary?.substring(0, 50) || item.task_id || '无摘要'}
+                </div>
+                <div className="notification-time">
+                  <ClockCircleOutlined /> {formatTime(item.created_at)}
+                  <span style={{ marginLeft: 8, color: '#06b6d4' }}>查看详情 <RightOutlined /></span>
+                </div>
+              </div>
             </div>
-            <div className="notification-content">
-              <div className="notification-title">
-                {item.agent?.name || `Agent-${item.agent_id}`}
-                <Tag color={item.status === 'success' ? 'success' : 'error'} style={{ marginLeft: 8 }}>
-                  {item.status === 'success' ? '成功' : '失败'}
-                </Tag>
-              </div>
-              <div className="notification-desc">
-                {item.result_summary?.substring(0, 50) || item.task_id || '无摘要'}
-              </div>
-              <div className="notification-time">
-                <ClockCircleOutlined /> {formatTime(item.created_at)}
-              </div>
-            </div>
-          </div>
-        ))
+          )
+        })
       ) : (
         <Empty description="暂无执行记录" image={Empty.PRESENTED_IMAGE_SIMPLE} />
       )}
@@ -128,20 +186,32 @@ export default function NotificationPanel({ open, onClose }) {
   const renderErrors = () => (
     <div className="notification-list">
       {notifications.errors.length > 0 ? (
-        notifications.errors.map(item => (
-          <div key={item.id} className="notification-item notification-item--error">
-            <div className="notification-icon">
-              <WarningOutlined style={{ color: '#ff4d4f' }} />
-            </div>
-            <div className="notification-content">
-              <div className="notification-title">{item.error_type || '未知错误'}</div>
-              <div className="notification-desc">{item.message?.substring(0, 60)}</div>
-              <div className="notification-time">
-                <ClockCircleOutlined /> {formatTime(item.created_at)}
+        notifications.errors.map(item => {
+          const isRead = readIds.has(`error-${item.id}`)
+          return (
+            <div 
+              key={item.id} 
+              className={`notification-item notification-item--error ${isRead ? 'notification-item--read' : ''}`}
+              style={{ cursor: 'pointer' }}
+              onClick={() => handleGoDetail('error', item)}
+            >
+              <div className="notification-icon">
+                <WarningOutlined style={{ color: '#ff4d4f' }} />
+              </div>
+              <div className="notification-content">
+                <div className="notification-title">
+                  {item.error_type || '未知错误'}
+                  {!isRead && <Badge status="processing" style={{ marginLeft: 4 }} />}
+                </div>
+                <div className="notification-desc">{item.message?.substring(0, 60)}</div>
+                <div className="notification-time">
+                  <ClockCircleOutlined /> {formatTime(item.created_at)}
+                  <span style={{ marginLeft: 8, color: '#06b6d4' }}>查看详情 <RightOutlined /></span>
+                </div>
               </div>
             </div>
-          </div>
-        ))
+          )
+        })
       ) : (
         <Empty description="暂无错误日志" image={Empty.PRESENTED_IMAGE_SIMPLE} />
       )}
@@ -152,20 +222,32 @@ export default function NotificationPanel({ open, onClose }) {
   const renderMessages = () => (
     <div className="notification-list">
       {notifications.messages.length > 0 ? (
-        notifications.messages.map(item => (
-          <div key={item.id} className="notification-item">
-            <div className="notification-icon">
-              <MessageOutlined style={{ color: '#1890ff' }} />
-            </div>
-            <div className="notification-content">
-              <div className="notification-title">系统消息</div>
-              <div className="notification-desc">{item.content}</div>
-              <div className="notification-time">
-                <ClockCircleOutlined /> {item.time}
+        notifications.messages.map(item => {
+          const isRead = readIds.has(`msg-${item.id}`)
+          return (
+            <div 
+              key={item.id} 
+              className={`notification-item ${isRead ? 'notification-item--read' : ''}`}
+              style={{ cursor: 'pointer' }}
+              onClick={() => handleGoDetail('msg', item)}
+            >
+              <div className="notification-icon">
+                <MessageOutlined style={{ color: '#1890ff' }} />
+              </div>
+              <div className="notification-content">
+                <div className="notification-title">
+                  系统消息
+                  {!isRead && <Badge status="processing" style={{ marginLeft: 4 }} />}
+                </div>
+                <div className="notification-desc">{item.content}</div>
+                <div className="notification-time">
+                  <ClockCircleOutlined /> {item.time}
+                  <span style={{ marginLeft: 8, color: '#06b6d4' }}>查看详情 <RightOutlined /></span>
+                </div>
               </div>
             </div>
-          </div>
-        ))
+          )
+        })
       ) : (
         <Empty description="暂无消息" image={Empty.PRESENTED_IMAGE_SIMPLE} />
       )}
@@ -176,28 +258,44 @@ export default function NotificationPanel({ open, onClose }) {
   const renderUpdates = () => (
     <div className="notification-list">
       {notifications.updates.length > 0 ? (
-        notifications.updates.map(item => (
-          <div key={item.id} className="notification-item">
-            <div className="notification-icon">
-              <InfoCircleOutlined style={{ color: '#722ed1' }} />
-            </div>
-            <div className="notification-content">
-              <div className="notification-title">
-                {item.version}
-                {!item.read && <Badge status="processing" style={{ marginLeft: 8 }} />}
+        notifications.updates.map(item => {
+          const isRead = readIds.has(`update-${item.id}`)
+          return (
+            <div 
+              key={item.id} 
+              className={`notification-item ${isRead ? 'notification-item--read' : ''}`}
+              onClick={() => markAsRead('update', item.id)}
+              style={{ cursor: 'pointer' }}
+            >
+              <div className="notification-icon">
+                <InfoCircleOutlined style={{ color: '#722ed1' }} />
               </div>
-              <div className="notification-desc">{item.content}</div>
-              <div className="notification-time">
-                <ClockCircleOutlined /> {item.time}
+              <div className="notification-content">
+                <div className="notification-title">
+                  {item.version}
+                  {!isRead && <Badge status="processing" style={{ marginLeft: 8 }} />}
+                </div>
+                <div className="notification-desc">{item.content}</div>
+                <div className="notification-time">
+                  <ClockCircleOutlined /> {item.time}
+                </div>
               </div>
             </div>
-          </div>
-        ))
+          )
+        })
       ) : (
         <Empty description="暂无更新" image={Empty.PRESENTED_IMAGE_SIMPLE} />
       )}
     </div>
   )
+
+  // 计算各 tab 未读数
+  const tabCounts = {
+    executions: notifications.executions.filter(e => !readIds.has(`exec-${e.id}`)).length,
+    errors: notifications.errors.filter(e => !readIds.has(`error-${e.id}`)).length,
+    messages: notifications.messages.filter(e => !readIds.has(`msg-${e.id}`)).length,
+    updates: notifications.updates.filter(e => !readIds.has(`update-${e.id}`)).length,
+  }
 
   // Tab 项
   const tabItems = [
@@ -207,7 +305,7 @@ export default function NotificationPanel({ open, onClose }) {
         <span>
           <RobotOutlined />
           执行结果
-          {unreadCounts.executions > 0 && <Badge count={unreadCounts.executions} size="small" style={{ marginLeft: 4 }} />}
+          {tabCounts.executions > 0 && <Badge count={tabCounts.executions} size="small" style={{ marginLeft: 4 }} />}
         </span>
       ),
       children: renderExecutions()
@@ -218,7 +316,7 @@ export default function NotificationPanel({ open, onClose }) {
         <span>
           <WarningOutlined />
           错误日志
-          {unreadCounts.errors > 0 && <Badge count={unreadCounts.errors} size="small" style={{ marginLeft: 4 }} />}
+          {tabCounts.errors > 0 && <Badge count={tabCounts.errors} size="small" style={{ marginLeft: 4 }} />}
         </span>
       ),
       children: renderErrors()
@@ -229,7 +327,7 @@ export default function NotificationPanel({ open, onClose }) {
         <span>
           <MessageOutlined />
           客服消息
-          {unreadCounts.messages > 0 && <Badge count={unreadCounts.messages} size="small" style={{ marginLeft: 4 }} />}
+          {tabCounts.messages > 0 && <Badge count={tabCounts.messages} size="small" style={{ marginLeft: 4 }} />}
         </span>
       ),
       children: renderMessages()
@@ -240,7 +338,7 @@ export default function NotificationPanel({ open, onClose }) {
         <span>
           <InfoCircleOutlined />
           版本更新
-          {unreadCounts.updates > 0 && <Badge count={unreadCounts.updates} size="small" style={{ marginLeft: 4 }} />}
+          {tabCounts.updates > 0 && <Badge count={tabCounts.updates} size="small" style={{ marginLeft: 4 }} />}
         </span>
       ),
       children: renderUpdates()
@@ -271,7 +369,17 @@ export default function NotificationPanel({ open, onClose }) {
         alignItems: 'center'
       }}>
         <span style={{ fontSize: 16, fontWeight: 600 }}>消息中心</span>
-        <Button type="text" size="small" onClick={onClose}>关闭</Button>
+        <div>
+          <Button 
+            type="text" 
+            size="small" 
+            onClick={() => markTabAsRead(activeTab)}
+            style={{ marginRight: 8, color: '#06b6d4' }}
+          >
+            全部已读
+          </Button>
+          <Button type="text" size="small" onClick={onClose}>关闭</Button>
+        </div>
       </div>
       
       <Tabs 

@@ -1,19 +1,35 @@
-import { useState } from 'react'
-import { BellOutlined, SearchOutlined, UserOutlined, LogoutOutlined, SettingOutlined } from '@ant-design/icons'
+import { useState, useCallback } from 'react'
+import { BellOutlined, SearchOutlined, UserOutlined, LogoutOutlined, SettingOutlined, SmileOutlined } from '@ant-design/icons'
 import { Badge, Dropdown, App } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import useAuthStore from '../stores/authStore'
+import useMascotStore from '../stores/mascotStore'
 import NotificationPanel from './NotificationPanel'
 
 function Header() {
   const { message } = App.useApp()
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
+  const { reset: resetMascot } = useMascotStore()
   const [notificationOpen, setNotificationOpen] = useState(false)
-  const [unreadCount, setUnreadCount] = useState(3) // 模拟未读数
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  // 接收 NotificationPanel 的未读数更新
+  const handleUnreadChange = useCallback((total) => {
+    setUnreadCount(total)
+  }, [])
 
   // 用户菜单
   const userMenuItems = [
+    {
+      key: 'change-mascot',
+      icon: <SmileOutlined />,
+      label: '更换看板娘',
+      onClick: () => {
+        resetMascot()
+        navigate('/select-mascot')
+      }
+    },
     {
       key: 'settings',
       icon: <SettingOutlined />,
@@ -80,7 +96,8 @@ function Header() {
       {/* 消息中心弹框 */}
       <NotificationPanel 
         open={notificationOpen} 
-        onClose={() => setNotificationOpen(false)} 
+        onClose={() => setNotificationOpen(false)}
+        onUnreadChange={handleUnreadChange}
       />
     </>
   )

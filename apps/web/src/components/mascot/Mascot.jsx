@@ -134,7 +134,12 @@ export default function Mascot() {
     }
 
     if (interactMode) {
-      // 互动模式：点击触发互动动画（由 Live2D 自己处理 tap event）
+      // 互动模式下：单击（非拖拽）退出互动模式，恢复环状菜单
+      toggleInteractMode()
+      const rect = e.currentTarget.getBoundingClientRect()
+      const x = rect.left + rect.width / 2
+      const y = rect.top + rect.height / 2
+      openMenu(x, y)
       return
     }
 
@@ -194,7 +199,7 @@ export default function Mascot() {
           {/* Hover 提示 */}
           {isHovering && !isMenuOpen && !isDragging && (
             <div className="mascot-tooltip">
-              <span>{interactMode ? '✨ 拖拽我~' : '❓ 点我互动'}</span>
+              <span>{interactMode ? '✨ 拖拽我~ 点击恢复菜单' : '❓ 点我互动'}</span>
             </div>
           )}
 
