@@ -109,6 +109,16 @@ export const dashboardApi = {
   // 获取图表数据
   getCharts(params?: { period?: string }): Promise<ApiResponse<ChartData>> {
     return api.get('/dashboard/charts', { params })
+  },
+
+  // 获取执行结果汇总
+  getResultSummaries(params?: { agent_id?: number; agent_group?: string; start_date?: string; end_date?: string; per_page?: number }): Promise<ApiResponse<PaginatedResponse<ExecutionLog>>> {
+    return api.get('/dashboard/result-summaries', { params })
+  },
+
+  // 获取智能体组列表
+  getAgentGroups(): Promise<ApiResponse<Array<{ agent_group: string; count: number }>>> {
+    return api.get('/dashboard/agent-groups')
   }
 }
 

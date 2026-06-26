@@ -23,10 +23,11 @@ export default function Login() {
 
       // 登录成功，检查是否已选择看板娘
       const redirect = searchParams.get('redirect')
-      if (redirect) {
-        navigate(redirect, { replace: true })
-      } else if (!hasSelectedModel()) {
+      if (!hasSelectedModel()) {
+        // 首次登录，必须先选择看板娘
         navigate('/select-mascot', { replace: true })
+      } else if (redirect) {
+        navigate(redirect, { replace: true })
       } else {
         navigate('/', { replace: true })
       }

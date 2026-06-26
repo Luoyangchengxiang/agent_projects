@@ -9,10 +9,12 @@ class ExecutionLog extends Model
 {
     protected $fillable = [
         'agent_id',
+        'agent_group',
         'task_id',
         'status',
         'input',
         'output',
+        'result_summary',
         'context',
         'duration',
         'error',

@@ -1,11 +1,13 @@
 /**
  * 看板娘形象选择页面
  * 首次登录时选择，绑定用户后不可更改
+ * 左侧选择列表 + 右侧实时预览
  */
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CheckOutlined, LockOutlined } from '@ant-design/icons'
+import { CheckOutlined, LockOutlined, ArrowRightOutlined } from '@ant-design/icons'
 import useMascotStore from '../stores/mascotStore'
+import Live2DRenderer from '../components/mascot/Live2DRenderer'
 import './mascot-select.css'
 
 export default function MascotSelect() {
@@ -13,6 +15,8 @@ export default function MascotSelect() {
   const [selected, setSelected] = useState(null)
   const [confirmed, setConfirmed] = useState(false)
   const navigate = useNavigate()
+
+  const selectedModel = models.find(m => m.id === selected)
 
   const handleConfirm = () => {
     if (!selected) return
@@ -34,23 +38,61 @@ export default function MascotSelect() {
           <p>选择一个你喜欢的形象，它将陪伴你使用系统（选定后不可更改）</p>
         </div>
 
-        {/* 形象网格 */}
-        <div className="mascot-select-grid">
-          {models.map((model) => (
-            <div
-              key={model.id}
-              className={`mascot-select-card ${selected === model.id ? 'mascot-select-card--selected' : ''}`}
-              onClick={() => setSelected(model.id)}
-            >
-              <div className="mascot-select-card-emoji">{model.emoji}</div>
-              <div className="mascot-select-card-name">{model.name}</div>
-              {selected === model.id && (
-                <div className="mascot-select-card-check">
-                  <CheckOutlined />
+        {/* 主体：左侧列表 + 右侧预览 */}
+        <div className="mascot-select-main">
+          {/* 左侧形象列表 */}
+          <div className="mascot-select-list">
+            {models.map((model) => (
+              <div
+                key={model.id}
+                className={`mascot-select-item ${selected === model.id ? 'mascot-select-item--selected' : ''}`}
+                onClick={() => setSelected(model.id)}
+              >
+                <div className="mascot-select-item-emoji">{model.emoji}</div>
+                <div className="mascot-select-item-info">
+                  <div className="mascot-select-item-name">{model.name}</div>
+                  <div className="mascot-select-item-id">{model.id}</div>
                 </div>
-              )}
-            </div>
-          ))}
+                {selected === model.id && (
+                  <div className="mascot-select-item-check">
+                    <CheckOutlined />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* 右侧预览区 */}
+          <div className="mascot-select-preview">
+            {selectedModel ? (
+              <>
+                <div className="mascot-select-preview-emoji">
+                  {selectedModel.emoji}
+                </div>
+                <div className="mascot-select-preview-name">
+                  {selectedModel.name}
+                </div>
+                <div className="mascot-select-preview-desc">
+                  选择此形象作为你的看板娘
+                </div>
+                <div className="mascot-select-preview-model">
+                  <Live2DRenderer
+                    modelId={selectedModel.id}
+                    width={200}
+                    height={250}
+                    showControls={false}
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="mascot-select-preview-empty">
+                <div className="mascot-select-preview-empty-icon">👈</div>
+                <div className="mascot-select-preview-empty-text">
+                  从左侧选择一个形象
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* 确认按钮 */}
@@ -66,7 +108,7 @@ export default function MascotSelect() {
               </>
             ) : selected ? (
               <>
-                <LockOutlined /> 确认选择（不可更改）
+                <LockOutlined /> 确认选择（不可更改） <ArrowRightOutlined />
               </>
             ) : (
               '请先选择一个形象'

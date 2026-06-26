@@ -39,21 +39,26 @@
   align-items: center;
   justify-content: center;
   gap: 2px;
-  transition: all 0.2s ease;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
   animation: radialItemIn 0.3s ease backwards;
   backdrop-filter: blur(8px);
 }
 
 .radial-menu-item:hover {
-  transform: var(--base-transform, translate(0, 0)) scale(1.15) !important;
   background: var(--item-color, #00d4ff);
   color: white;
   box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
 }
 
+/* 使用 scale 而不是覆盖 transform，避免位置跳动 */
+.radial-menu-item:hover .radial-menu-item-icon {
+  transform: scale(1.2);
+}
+
 .radial-menu-item-icon {
   font-size: 18px;
   line-height: 1;
+  transition: transform 0.2s ease;
 }
 
 .radial-menu-item-label {
@@ -65,7 +70,7 @@
 @keyframes radialItemIn {
   from {
     opacity: 0;
-    transform: translate(0, 0) scale(0.3);
+    transform: translate(var(--item-x, 0), var(--item-y, 0)) scale(0.3);
   }
   to {
     opacity: 1;

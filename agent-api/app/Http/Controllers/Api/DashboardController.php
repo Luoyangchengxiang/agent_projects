@@ -80,4 +80,58 @@ class DashboardController extends Controller
             ],
         ]);
     }
+
+    /**
+     * 获取执行结果汇总（按智能体或智能体组）
+     */
+    public function resultSummaries(Request $request): JsonResponse
+    {
+        $query = ExecutionLog::with('agent')
+            ->whereNotNull('result_summary')
+            ->orderBy('created_at', 'desc');
+
+        // 按智能体筛选
+        if ($request->has('agent_id')) {
+            $query->where('agent_id', $request->agent_id);
+        }
+
+        // 按智能体组筛选
+        if ($request->has('agent_group')) {
+            $query->where('agent_group', $request->agent_group);
+        }
+
+        // 按时间范围筛选
+        if ($request->has('start_date')) {
+            $query->where('created_at', '>=', $request->start_date);
+        }
+        if ($request->has('end_date')) {
+            $query->where('created_at', '<=', $request->end_date);
+        }
+
+        // 分页
+        $perPage = $request->get('per_page', 10);
+        $summaries = $query->paginate($perPage);
+
+        return response()->json([
+            'success' => true,
+            'data' => $summaries,
+        ]);
+    }
+
+    /**
+     * 获取智能体组列表
+     */
+    public function agentGroups(): JsonResponse
+    {
+        $groups = ExecutionLog::whereNotNull('agent_group')
+            ->select('agent_group', DB::raw('COUNT(*) as count'))
+            ->groupBy('agent_group')
+            ->orderBy('count', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $groups,
+        ]);
+    }
 }

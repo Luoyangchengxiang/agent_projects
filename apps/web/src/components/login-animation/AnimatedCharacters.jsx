@@ -109,18 +109,30 @@ export default function AnimatedCharacters({ isTyping = false, hasSecret = false
     return () => clearTimeout(t)
   }, [isTyping])
 
-  // 密码可见时紫色偷看
+  // 密码可见时紫色偷看（定时循环触发）
   useEffect(() => {
-    let t1, t2
+    let t1, t2, intervalId
     if (hasSecret && secretVisible) {
-      t1 = setTimeout(() => {
-        setIsPurplePeeking(true)
-        t2 = setTimeout(() => setIsPurplePeeking(false), 800)
-      }, Math.random() * 3000 + 2000)
+      const startPeeking = () => {
+        t1 = setTimeout(() => {
+          setIsPurplePeeking(true)
+          t2 = setTimeout(() => setIsPurplePeeking(false), 800)
+        }, Math.random() * 2000 + 1000)
+      }
+      // 立即开始第一次偷看
+      startPeeking()
+      // 每隔 3-5 秒重复偷看
+      intervalId = setInterval(() => {
+        startPeeking()
+      }, Math.random() * 2000 + 3000)
     } else {
       setIsPurplePeeking(false)
     }
-    return () => { clearTimeout(t1); clearTimeout(t2) }
+    return () => {
+      clearTimeout(t1)
+      clearTimeout(t2)
+      clearInterval(intervalId)
+    }
   }, [hasSecret, secretVisible])
 
   // 计算样式

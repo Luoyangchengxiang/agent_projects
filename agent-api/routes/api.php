@@ -43,6 +43,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // 仪表盘
     Route::get('/dashboard/stats', [App\Http\Controllers\Api\DashboardController::class, 'stats']);
     Route::get('/dashboard/charts', [App\Http\Controllers\Api\DashboardController::class, 'charts']);
+    Route::get('/dashboard/result-summaries', [App\Http\Controllers\Api\DashboardController::class, 'resultSummaries']);
+    Route::get('/dashboard/agent-groups', [App\Http\Controllers\Api\DashboardController::class, 'agentGroups']);
 
     // 错误日志
     Route::get('/error-logs/stats', [App\Http\Controllers\Api\ErrorLogController::class, 'stats']);

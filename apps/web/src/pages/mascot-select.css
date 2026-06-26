@@ -1,5 +1,6 @@
 /**
  * 看板娘选择页面样式
+ * 左侧选择列表 + 右侧实时预览
  */
 
 .mascot-select {
@@ -7,12 +8,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-primary, #0a0a0f);
+  background: var(--bg-base, #0f1117);
   padding: 20px;
 }
 
 .mascot-select-container {
-  max-width: 800px;
+  max-width: 1000px;
   width: 100%;
 }
 
@@ -23,63 +24,101 @@
 
 .mascot-select-header h1 {
   font-size: 28px;
-  color: var(--text-primary, #e0e0e0);
+  color: var(--text-primary, #e5e7eb);
   margin-bottom: 8px;
 }
 
 .mascot-select-header p {
   font-size: 14px;
-  color: var(--text-secondary, #888);
+  color: var(--text-secondary, #9ca3af);
 }
 
-/* 形象网格 */
-.mascot-select-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 16px;
+/* 主体布局：左侧列表 + 右侧预览 */
+.mascot-select-main {
+  display: flex;
+  gap: 24px;
   margin-bottom: 32px;
+  min-height: 400px;
 }
 
-.mascot-select-card {
+/* 左侧形象列表 */
+.mascot-select-list {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 8px;
-  padding: 20px 12px;
-  border-radius: 12px;
-  background: var(--bg-card, #1a1a2e);
+  max-height: 500px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.mascot-select-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.mascot-select-list::-webkit-scrollbar-track {
+  background: var(--bg-surface, #1a1d24);
+  border-radius: 3px;
+}
+
+.mascot-select-list::-webkit-scrollbar-thumb {
+  background: var(--bg-elevated, #2a2d35);
+  border-radius: 3px;
+}
+
+.mascot-select-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: var(--bg-card, #24272e);
   border: 2px solid transparent;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   position: relative;
 }
 
-.mascot-select-card:hover {
+.mascot-select-item:hover {
   border-color: rgba(0, 212, 255, 0.3);
-  transform: translateY(-2px);
+  background: var(--bg-elevated, #2a2d35);
 }
 
-.mascot-select-card--selected {
+.mascot-select-item--selected {
   border-color: var(--color-primary, #00d4ff);
   background: rgba(0, 212, 255, 0.08);
-  box-shadow: 0 0 20px rgba(0, 212, 255, 0.15);
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.1);
 }
 
-.mascot-select-card-emoji {
-  font-size: 36px;
+.mascot-select-item-emoji {
+  font-size: 32px;
   line-height: 1;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-surface, #1a1d24);
+  border-radius: 8px;
 }
 
-.mascot-select-card-name {
-  font-size: 13px;
-  color: var(--text-primary, #e0e0e0);
-  text-align: center;
+.mascot-select-item-info {
+  flex: 1;
 }
 
-.mascot-select-card-check {
-  position: absolute;
-  top: 8px;
-  right: 8px;
+.mascot-select-item-name {
+  font-size: 15px;
+  color: var(--text-primary, #e5e7eb);
+  font-weight: 500;
+}
+
+.mascot-select-item-id {
+  font-size: 12px;
+  color: var(--text-muted, #6b7280);
+  margin-top: 2px;
+}
+
+.mascot-select-item-check {
   width: 24px;
   height: 24px;
   border-radius: 50%;
@@ -95,6 +134,81 @@
 @keyframes mascotCheckIn {
   from { transform: scale(0); }
   to { transform: scale(1); }
+}
+
+/* 右侧预览区 */
+.mascot-select-preview {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card, #24272e);
+  border-radius: 12px;
+  border: 2px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  padding: 24px;
+  min-height: 350px;
+}
+
+.mascot-select-preview-emoji {
+  font-size: 64px;
+  line-height: 1;
+  margin-bottom: 16px;
+  animation: mascotPreviewBounce 0.5s ease;
+}
+
+@keyframes mascotPreviewBounce {
+  0% { transform: scale(0.5); opacity: 0; }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.mascot-select-preview-name {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary, #e5e7eb);
+  margin-bottom: 8px;
+}
+
+.mascot-select-preview-desc {
+  font-size: 14px;
+  color: var(--text-secondary, #9ca3af);
+  margin-bottom: 20px;
+}
+
+.mascot-select-preview-model {
+  width: 200px;
+  height: 250px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-surface, #1a1d24);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* 空状态 */
+.mascot-select-preview-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: var(--text-muted, #6b7280);
+}
+
+.mascot-select-preview-empty-icon {
+  font-size: 48px;
+  animation: mascotPreviewArrow 1.5s ease-in-out infinite;
+}
+
+@keyframes mascotPreviewArrow {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-10px); }
+}
+
+.mascot-select-preview-empty-text {
+  font-size: 16px;
 }
 
 /* 确认按钮 */
@@ -137,4 +251,19 @@
   0% { transform: scale(1); }
   50% { transform: scale(1.05); }
   100% { transform: scale(1); }
+}
+
+/* 响应式布局 */
+@media (max-width: 768px) {
+  .mascot-select-main {
+    flex-direction: column;
+  }
+
+  .mascot-select-list {
+    max-height: 200px;
+  }
+
+  .mascot-select-preview {
+    min-height: 250px;
+  }
 }

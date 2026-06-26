@@ -15,13 +15,16 @@ export interface Agent {
 export interface ExecutionLog {
   id: number
   agent_id: number
+  agent_group?: string
   task_id: string
   status: 'pending' | 'running' | 'success' | 'failed'
   input?: string
   output?: string
+  result_summary?: string
   context?: Record<string, any>
   duration?: number
   error?: string
+  agent?: Agent
   created_at: string
   updated_at: string
 }
