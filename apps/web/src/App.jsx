@@ -1,4 +1,5 @@
-import { Routes, Route, lazy, Suspense, useEffect } from 'react'
+import React, { lazy, Suspense, useEffect } from 'react'
+import { Routes, Route } from 'react-router-dom'
 import MainLayout from './components/MainLayout'
 import ProtectedRoute from './components/ProtectedRoute'
 import useAuthStore from './stores/authStore'
@@ -41,6 +42,31 @@ function PageLoading() {
   )
 }
 
+// 错误边界
+function ErrorFallback({ error }) {
+  return (
+    <div style={{ padding: 40, color: '#ef4444', background: '#0f1117', minHeight: '100vh' }}>
+      <h2>页面加载失败</h2>
+      <pre style={{ color: '#9ca3af', fontSize: 12 }}>{error?.message || '未知错误'}</pre>
+      <button 
+        onClick={() => window.location.reload()} 
+        style={{ marginTop: 16, padding: '8px 16px', background: '#06b6d4', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}
+      >
+        刷新页面
+      </button>
+    </div>
+  )
+}
+
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null } }
+  static getDerivedStateFromError(error) { return { error } }
+  render() {
+    if (this.state.error) return <ErrorFallback error={this.state.error} />
+    return this.props.children
+  }
+}
+
 function App({ onReady }) {
   const { init, isInitialized } = useAuthStore()
   const { hasSelectedModel } = useMascotStore()
@@ -64,7 +90,7 @@ function App({ onReady }) {
         justifyContent: 'center',
         alignItems: 'center',
         height: '100vh',
-        background: '#0f0f23',
+        background: '#0f1117',
         color: '#e0e0e0',
       }}>
         <div style={{ textAlign: 'center' }}>
@@ -84,38 +110,40 @@ function App({ onReady }) {
   }
 
   return (
-    <Suspense fallback={<PageLoading />}>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+    <ErrorBoundary>
+      <Suspense fallback={<PageLoading />}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
 
-        {/* 看板娘选择（登录后、首次使用时） */}
-        <Route
-          path="/select-mascot"
-          element={
-            <ProtectedRoute>
-              <MascotSelect />
-            </ProtectedRoute>
-          }
-        />
+          {/* 看板娘选择（登录后、首次使用时） */}
+          <Route
+            path="/select-mascot"
+            element={
+              <ProtectedRoute>
+                <MascotSelect />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <MainLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Dashboard />} />
-          <Route path="agents" element={<AgentList />} />
-          <Route path="logs" element={<ExecutionLogs />} />
-          <Route path="errors" element={<ErrorLogs />} />
-          <Route path="chat" element={<ChatAdmin />} />
-          <Route path="permissions" element={<PermissionManagement />} />
-        </Route>
-      </Routes>
-    </Suspense>
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <MainLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Dashboard />} />
+            <Route path="agents" element={<AgentList />} />
+            <Route path="logs" element={<ExecutionLogs />} />
+            <Route path="errors" element={<ErrorLogs />} />
+            <Route path="chat" element={<ChatAdmin />} />
+            <Route path="permissions" element={<PermissionManagement />} />
+          </Route>
+        </Routes>
+      </Suspense>
+    </ErrorBoundary>
   )
 }
 
