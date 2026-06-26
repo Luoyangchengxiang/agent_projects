@@ -30,9 +30,32 @@ export default function NotificationPanel({ open, onClose, onUnreadChange }) {
     messages: [],
     updates: []
   })
-  const [readIds, setReadIds] = useState(new Set()) // 已读的项目ID
 
-  // 加载通知数据
+  // 从 localStorage 恢复已读状态
+  const [readIds, setReadIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('notification_read_ids')
+      return saved ? new Set(JSON.parse(saved)) : new Set()
+    } catch {
+      return new Set()
+    }
+  })
+
+  // 持久化已读状态到 localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('notification_read_ids', JSON.stringify([...readIds]))
+    } catch {
+      // localStorage 满了或其他错误，静默处理
+    }
+  }, [readIds])
+
+  // 组件挂载时立即加载通知数据（不只是打开面板时）
+  useEffect(() => {
+    loadNotifications()
+  }, [])
+
+  // 打开面板时刷新数据（获取最新通知）
   useEffect(() => {
     if (open) {
       loadNotifications()
