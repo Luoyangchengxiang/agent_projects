@@ -95,4 +95,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/generate/selection', [App\Http\Controllers\ReportController::class, 'generateSelection']);
         Route::post('/generate/custom', [App\Http\Controllers\ReportController::class, 'generateCustom']);
     });
+
+    // ==================== 知识图谱 ====================
+    Route::prefix('graph')->group(function () {
+        Route::get('/', [App\Http\Controllers\GraphController::class, 'index']);
+        Route::get('/search', [App\Http\Controllers\GraphController::class, 'search']);
+        Route::post('/nodes', [App\Http\Controllers\GraphController::class, 'store']);
+        Route::get('/nodes/{node}', [App\Http\Controllers\GraphController::class, 'show']);
+        Route::put('/nodes/{node}', [App\Http\Controllers\GraphController::class, 'update']);
+        Route::delete('/nodes/{node}', [App\Http\Controllers\GraphController::class, 'destroy']);
+        Route::get('/nodes/{node}/neighbors', [App\Http\Controllers\GraphController::class, 'neighbors']);
+        Route::post('/edges', [App\Http\Controllers\GraphController::class, 'storeEdge']);
+        Route::delete('/edges/{edge}', [App\Http\Controllers\GraphController::class, 'destroyEdge']);
+    });
 });
