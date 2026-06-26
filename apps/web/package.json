@@ -18,9 +18,9 @@
     "@tanstack/react-query": "^5.0.0",
     "antd": "^5.0.0",
     "axios": "^1.0.0",
-    "echarts": "^5.0.0",
     "echarts-for-react": "^3.0.0",
     "lucide-react": "^1.21.0",
+    "preload-screen": "^1.2.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-markdown": "^10.1.0",
@@ -40,6 +40,7 @@
     "jsdom": "^29.1.1",
     "postcss": "^8.0.0",
     "tailwindcss": "^3.0.0",
+    "terser": "^5.48.0",
     "vite": "^5.0.0",
     "vitest": "^2.0.0"
   }

@@ -1,26 +1,60 @@
-import { Routes, Route } from 'react-router-dom'
-import { useEffect } from 'react'
+import { Routes, Route, lazy, Suspense, useEffect } from 'react'
 import MainLayout from './components/MainLayout'
 import ProtectedRoute from './components/ProtectedRoute'
-import Dashboard from './pages/Dashboard'
-import AgentList from './pages/AgentList'
-import ExecutionLogs from './pages/ExecutionLogs'
-import ErrorLogs from './pages/ErrorLogs'
-import ChatAdmin from './pages/ChatAdmin'
-import Login from './pages/Login'
-import Register from './pages/Register'
-import MascotSelect from './pages/MascotSelect'
-import PermissionManagement from './pages/PermissionManagement'
 import useAuthStore from './stores/authStore'
 import useMascotStore from './stores/mascotStore'
 
-function App() {
+// 懒加载所有页面 — 不进入首屏 bundle
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const AgentList = lazy(() => import('./pages/AgentList'))
+const ExecutionLogs = lazy(() => import('./pages/ExecutionLogs'))
+const ErrorLogs = lazy(() => import('./pages/ErrorLogs'))
+const ChatAdmin = lazy(() => import('./pages/ChatAdmin'))
+const Login = lazy(() => import('./pages/Login'))
+const Register = lazy(() => import('./pages/Register'))
+const MascotSelect = lazy(() => import('./pages/MascotSelect'))
+const PermissionManagement = lazy(() => import('./pages/PermissionManagement'))
+
+// 页面加载占位
+function PageLoading() {
+  return (
+    <div style={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      height: '100%',
+      minHeight: 200,
+      color: '#9ca3af',
+      fontSize: 14,
+    }}>
+      <div style={{
+        width: 24,
+        height: 24,
+        border: '2px solid rgba(6, 182, 212, 0.2)',
+        borderTopColor: '#06b6d4',
+        borderRadius: '50%',
+        animation: 'spin 1s linear infinite',
+        marginRight: 12,
+      }} />
+      加载中...
+    </div>
+  )
+}
+
+function App({ onReady }) {
   const { init, isInitialized } = useAuthStore()
   const { hasSelectedModel } = useMascotStore()
 
   useEffect(() => {
     init()
   }, [init])
+
+  // 初始化完成后关闭预加载屏
+  useEffect(() => {
+    if (isInitialized && onReady) {
+      onReady()
+    }
+  }, [isInitialized, onReady])
 
   // 显示加载状态
   if (!isInitialized) {
@@ -50,36 +84,38 @@ function App() {
   }
 
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+    <Suspense fallback={<PageLoading />}>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
 
-      {/* 看板娘选择（登录后、首次使用时） */}
-      <Route
-        path="/select-mascot"
-        element={
-          <ProtectedRoute>
-            <MascotSelect />
-          </ProtectedRoute>
-        }
-      />
+        {/* 看板娘选择（登录后、首次使用时） */}
+        <Route
+          path="/select-mascot"
+          element={
+            <ProtectedRoute>
+              <MascotSelect />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <MainLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<Dashboard />} />
-        <Route path="agents" element={<AgentList />} />
-        <Route path="logs" element={<ExecutionLogs />} />
-        <Route path="errors" element={<ErrorLogs />} />
-        <Route path="chat" element={<ChatAdmin />} />
-        <Route path="permissions" element={<PermissionManagement />} />
-      </Route>
-    </Routes>
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <MainLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Dashboard />} />
+          <Route path="agents" element={<AgentList />} />
+          <Route path="logs" element={<ExecutionLogs />} />
+          <Route path="errors" element={<ErrorLogs />} />
+          <Route path="chat" element={<ChatAdmin />} />
+          <Route path="permissions" element={<PermissionManagement />} />
+        </Route>
+      </Routes>
+    </Suspense>
   )
 }
 

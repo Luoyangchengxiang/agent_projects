@@ -12,7 +12,7 @@ importers:
     devDependencies:
       vitepress:
         specifier: ^1.6.4
-        version: 1.6.4(@algolia/client-search@5.55.1)(@types/node@26.0.0)(@types/react@18.3.31)(axios@1.18.0)(postcss@8.5.15)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(search-insights@2.17.3)
+        version: 1.6.4(@algolia/client-search@5.55.1)(@types/node@26.0.0)(@types/react@18.3.31)(axios@1.18.0)(postcss@8.5.15)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(search-insights@2.17.3)(terser@5.48.0)
       vue:
         specifier: ^3.5.38
         version: 3.5.38
@@ -40,15 +40,15 @@ importers:
       axios:
         specifier: ^1.0.0
         version: 1.18.0
-      echarts:
-        specifier: ^5.0.0
-        version: 5.0.0
       echarts-for-react:
         specifier: ^3.0.0
         version: 3.0.6(echarts@5.0.0)(react@18.2.0)
       lucide-react:
         specifier: ^1.21.0
         version: 1.21.0(react@18.2.0)
+      preload-screen:
+        specifier: ^1.2.1
+        version: 1.2.1(vite@5.0.0(@types/node@26.0.0)(terser@5.48.0))
       react:
         specifier: ^18.2.0
         version: 18.2.0
@@ -85,10 +85,10 @@ importers:
         version: 18.3.7(@types/react@18.3.31)
       '@vitejs/plugin-react':
         specifier: ^4.0.0
-        version: 4.0.0(vite@5.0.0(@types/node@26.0.0))
+        version: 4.0.0(vite@5.0.0(@types/node@26.0.0)(terser@5.48.0))
       '@vitest/coverage-v8':
         specifier: ^2.0.0
-        version: 2.0.0(vitest@2.0.0(@types/node@26.0.0)(jsdom@29.1.1))
+        version: 2.0.0(vitest@2.0.0(@types/node@26.0.0)(jsdom@29.1.1)(terser@5.48.0))
       autoprefixer:
         specifier: ^10.0.0
         version: 10.5.0(postcss@8.5.15)
@@ -101,12 +101,15 @@ importers:
       tailwindcss:
         specifier: ^3.0.0
         version: 3.4.19
+      terser:
+        specifier: ^5.48.0
+        version: 5.48.0
       vite:
         specifier: ^5.0.0
-        version: 5.0.0(@types/node@26.0.0)
+        version: 5.0.0(@types/node@26.0.0)(terser@5.48.0)
       vitest:
         specifier: ^2.0.0
-        version: 2.0.0(@types/node@26.0.0)(jsdom@29.1.1)
+        version: 2.0.0(@types/node@26.0.0)(jsdom@29.1.1)(terser@5.48.0)
 
   packages/api:
     dependencies:
@@ -752,6 +755,9 @@ packages:
     resolution: {integrity: sha512-R8gLRTZeyp03ymzP/6Lil/28tGeGEzhx1q2k703KGWRAI1VdvPIXdG70VJc2pAMw3NA6JKL5hhFu1sJX0Mnn/A==}
     engines: {node: '>=6.0.0'}
 
+  '@jridgewell/source-map@0.3.11':
+    resolution: {integrity: sha512-ZMp1V8ZFcPG5dIWnQLr3NSI1MiCU7UETdS/A0G8V/XWHvJv3ZsFqutJn1Y5RPmAPX6F3BiE397OqveU/9NCuIA==}
+
   '@jridgewell/sourcemap-codec@1.4.10':
     resolution: {integrity: sha512-Ht8wIW5v165atIX1p+JvKR5ONzUyF4Ac8DZIQ5kZs9zrb6M8SJNXpx1zn04rn65VjBMygRoMXcyYwNK0fT7bEg==}
 
@@ -1261,6 +1267,11 @@ packages:
   '@vueuse/shared@12.4.0':
     resolution: {integrity: sha512-9yLgbHVIF12OSCojnjTIoZL1+UA10+O4E1aD6Hpfo/DKVm5o3SZIwz6CupqGy3+IcKI8d6Jnl26EQj/YucnW0Q==}
 
+  acorn@8.17.0:
+    resolution: {integrity: sha512-xRQbDb9BnwDafYNn6Vwl839DYVjqXYb1XVGtWAZ1kcDc6iwAL4hg3B1dZlRiuENFeO2H53gFG3in621AdERVAg==}
+    engines: {node: '>=0.4.0'}
+    hasBin: true
+
   agent-base@6.0.0:
     resolution: {integrity: sha512-j1Q7cSCqN+AwrmDd+pzgqc0/NpC655x2bUf5ZjRIO77DcNBFmh+OgRNzF6OKdCC9RSCb19fGd99+bhXFdkRNqw==}
     engines: {node: '>= 6.0.0'}
@@ -1370,6 +1381,9 @@ packages:
     engines: {node: ^6 || ^7 || ^8 || ^9 || ^10 || ^11 || ^12 || >=13.7}
     hasBin: true
 
+  buffer-from@1.1.2:
+    resolution: {integrity: sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ==}
+
   cac@6.7.14:
     resolution: {integrity: sha512-b6Ilus+c3RrdDk+JhLKUAQfzzgLEPy6wcXqS7f/xe1EETvsDP6GORG7SFuOs6cID5YkqchW/LXZbX5bc8j7ZcQ==}
     engines: {node: '>=8'}
@@ -1432,6 +1446,9 @@ packages:
 
   comma-separated-tokens@2.0.3:
     resolution: {integrity: sha512-Fu4hJdvzeylCfQPp9SGWidpzrMs7tTrlu6Vb8XGaRGck8QSNZJJp538Wrb60Lax4fPwR64ViY468OIUTbRlGZg==}
+
+  commander@2.20.0:
+    resolution: {integrity: sha512-7j2y+40w61zy6YC2iRNpUe/NwhNyoXrYpHMrSunaMG64nRnaf96zO/KMQR4OyN/UnE5KLyEBnKHd4aG3rskjpQ==}
 
   commander@4.0.0:
     resolution: {integrity: sha512-SEa2abMBTZuEjLVYpNrAFoRgxPwG4rXP3+SGY6CM/HZGeDzIA7Pzp+7H3AHDukKEpyy2SoSGGPShKqqfH9T9AQ==}
@@ -2232,6 +2249,14 @@ packages:
   preact@10.29.2:
     resolution: {integrity: sha512-7tNmwg/7mzzAoB/8kSg6Hl37JraAZw3Z3A0JSY7VXlZwo82Xn0G7wKbNNs2qoF4ZEEsQGTwDAroNdqKs1ofJxQ==}
 
+  preload-screen@1.2.1:
+    resolution: {integrity: sha512-e4KZTzBCF1XT/o0TruZ5Ne45udjaryt5ECL4S0E/TfhQVOGalFxA3Bn9RgKhfHAB+Wppy8Csxs3mH/ww8c9smQ==}
+    peerDependencies:
+      vite: ^7.0.0
+    peerDependenciesMeta:
+      vite:
+        optional: true
+
   pretty-format@27.0.2:
     resolution: {integrity: sha512-mXKbbBPnYTG7Yra9qFBtqj+IXcsvxsvOBco3QHxtxTl+hHKq6QdzMZ+q0CtL4ORHZgwGImRr2XZUX2EWzORxig==}
     engines: {node: ^10.13.0 || ^12.13.0 || ^14.15.0 || >=15.0.0}
@@ -2626,6 +2651,13 @@ packages:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
 
+  source-map-support@0.5.21:
+    resolution: {integrity: sha512-uBHU3L3czsIyYXKX88fdrGovxdSCoTGDRZ6SYXtSRxLZUzHg5P/66Ht6uoUlHu9EZod+inXhKo3qQgwXUT/y1w==}
+
+  source-map@0.6.1:
+    resolution: {integrity: sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==}
+    engines: {node: '>=0.10.0'}
+
   space-separated-tokens@2.0.2:
     resolution: {integrity: sha512-PEGlAwrG8yXGXRjW32fGbg66JAlOAwbObuqVoJpv/mRgoWDQfgH1wDPvtzWyUSNAXBGSk8h755YDbbcEy3SH2Q==}
 
@@ -2707,6 +2739,11 @@ packages:
   tailwindcss@3.4.19:
     resolution: {integrity: sha512-3ofp+LL8E+pK/JuPLPggVAIaEuhvIz4qNcf3nA1Xn2o/7fb7s/TYpHhwGDv1ZU3PkBluUVaF8PyCHcm48cKLWQ==}
     engines: {node: '>=14.0.0'}
+    hasBin: true
+
+  terser@5.48.0:
+    resolution: {integrity: sha512-J/9An6vs9Us6wKRriSFXBWdRZapREHqFzdNUKk0pmu804EMR6dr6winwo7e5JDxN4xahxQsuysyYFwlwj4XN/Q==}
+    engines: {node: '>=10'}
     hasBin: true
 
   test-exclude@7.0.2:
@@ -3564,6 +3601,11 @@ snapshots:
 
   '@jridgewell/set-array@1.2.1': {}
 
+  '@jridgewell/source-map@0.3.11':
+    dependencies:
+      '@jridgewell/gen-mapping': 0.3.5
+      '@jridgewell/trace-mapping': 0.3.31
+
   '@jridgewell/sourcemap-codec@1.4.10': {}
 
   '@jridgewell/sourcemap-codec@1.4.14': {}
@@ -3919,22 +3961,22 @@ snapshots:
 
   '@ungap/structured-clone@1.3.2': {}
 
-  '@vitejs/plugin-react@4.0.0(vite@5.0.0(@types/node@26.0.0))':
+  '@vitejs/plugin-react@4.0.0(vite@5.0.0(@types/node@26.0.0)(terser@5.48.0))':
     dependencies:
       '@babel/core': 7.29.7
       '@babel/plugin-transform-react-jsx-self': 7.29.7(@babel/core@7.29.7)
       '@babel/plugin-transform-react-jsx-source': 7.29.7(@babel/core@7.29.7)
       react-refresh: 0.14.0
-      vite: 5.0.0(@types/node@26.0.0)
+      vite: 5.0.0(@types/node@26.0.0)(terser@5.48.0)
     transitivePeerDependencies:
       - supports-color
 
-  '@vitejs/plugin-vue@5.2.1(vite@5.4.14(@types/node@26.0.0))(vue@3.5.38)':
+  '@vitejs/plugin-vue@5.2.1(vite@5.4.14(@types/node@26.0.0)(terser@5.48.0))(vue@3.5.38)':
     dependencies:
-      vite: 5.4.14(@types/node@26.0.0)
+      vite: 5.4.14(@types/node@26.0.0)(terser@5.48.0)
       vue: 3.5.38
 
-  '@vitest/coverage-v8@2.0.0(vitest@2.0.0(@types/node@26.0.0)(jsdom@29.1.1))':
+  '@vitest/coverage-v8@2.0.0(vitest@2.0.0(@types/node@26.0.0)(jsdom@29.1.1)(terser@5.48.0))':
     dependencies:
       '@ampproject/remapping': 2.3.0
       '@bcoe/v8-coverage': 0.2.3
@@ -3949,7 +3991,7 @@ snapshots:
       std-env: 3.7.0
       strip-literal: 2.1.1
       test-exclude: 7.0.2
-      vitest: 2.0.0(@types/node@26.0.0)(jsdom@29.1.1)
+      vitest: 2.0.0(@types/node@26.0.0)(jsdom@29.1.1)(terser@5.48.0)
     transitivePeerDependencies:
       - supports-color
 
@@ -4080,6 +4122,8 @@ snapshots:
       vue: 3.5.38
     transitivePeerDependencies:
       - typescript
+
+  acorn@8.17.0: {}
 
   agent-base@6.0.0:
     dependencies:
@@ -4248,6 +4292,8 @@ snapshots:
       node-releases: 2.0.48
       update-browserslist-db: 1.2.3(browserslist@4.28.4)
 
+  buffer-from@1.1.2: {}
+
   cac@6.7.14: {}
 
   call-bind-apply-helpers@1.0.2:
@@ -4309,6 +4355,8 @@ snapshots:
       delayed-stream: 1.0.0
 
   comma-separated-tokens@2.0.3: {}
+
+  commander@2.20.0: {}
 
   commander@4.0.0: {}
 
@@ -5314,6 +5362,10 @@ snapshots:
 
   preact@10.29.2: {}
 
+  preload-screen@1.2.1(vite@5.0.0(@types/node@26.0.0)(terser@5.48.0)):
+    optionalDependencies:
+      vite: 5.0.0(@types/node@26.0.0)(terser@5.48.0)
+
   pretty-format@27.0.2:
     dependencies:
       '@jest/types': 27.0.2
@@ -5851,6 +5903,13 @@ snapshots:
 
   source-map-js@1.2.1: {}
 
+  source-map-support@0.5.21:
+    dependencies:
+      buffer-from: 1.1.2
+      source-map: 0.6.1
+
+  source-map@0.6.1: {}
+
   space-separated-tokens@2.0.2: {}
 
   speakingurl@14.0.1: {}
@@ -5957,6 +6016,13 @@ snapshots:
     transitivePeerDependencies:
       - tsx
       - yaml
+
+  terser@5.48.0:
+    dependencies:
+      '@jridgewell/source-map': 0.3.11
+      acorn: 8.17.0
+      commander: 2.20.0
+      source-map-support: 0.5.21
 
   test-exclude@7.0.2:
     dependencies:
@@ -6072,13 +6138,13 @@ snapshots:
       '@types/unist': 3.0.3
       vfile-message: 4.0.3
 
-  vite-node@2.0.0(@types/node@26.0.0):
+  vite-node@2.0.0(@types/node@26.0.0)(terser@5.48.0):
     dependencies:
       cac: 6.7.14
       debug: 4.4.3
       pathe: 1.1.2
       picocolors: 1.1.1
-      vite: 5.0.0(@types/node@26.0.0)
+      vite: 5.0.0(@types/node@26.0.0)(terser@5.48.0)
     transitivePeerDependencies:
       - '@types/node'
       - less
@@ -6089,7 +6155,7 @@ snapshots:
       - supports-color
       - terser
 
-  vite@5.0.0(@types/node@26.0.0):
+  vite@5.0.0(@types/node@26.0.0)(terser@5.48.0):
     dependencies:
       esbuild: 0.19.3
       postcss: 8.5.15
@@ -6097,8 +6163,9 @@ snapshots:
     optionalDependencies:
       '@types/node': 26.0.0
       fsevents: 2.3.3
+      terser: 5.48.0
 
-  vite@5.4.14(@types/node@26.0.0):
+  vite@5.4.14(@types/node@26.0.0)(terser@5.48.0):
     dependencies:
       esbuild: 0.21.3
       postcss: 8.5.15
@@ -6106,8 +6173,9 @@ snapshots:
     optionalDependencies:
       '@types/node': 26.0.0
       fsevents: 2.3.3
+      terser: 5.48.0
 
-  vitepress@1.6.4(@algolia/client-search@5.55.1)(@types/node@26.0.0)(@types/react@18.3.31)(axios@1.18.0)(postcss@8.5.15)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(search-insights@2.17.3):
+  vitepress@1.6.4(@algolia/client-search@5.55.1)(@types/node@26.0.0)(@types/react@18.3.31)(axios@1.18.0)(postcss@8.5.15)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(search-insights@2.17.3)(terser@5.48.0):
     dependencies:
       '@docsearch/css': 3.8.2
       '@docsearch/js': 3.8.2(@algolia/client-search@5.55.1)(@types/react@18.3.31)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(search-insights@2.17.3)
@@ -6116,7 +6184,7 @@ snapshots:
       '@shikijs/transformers': 2.1.0
       '@shikijs/types': 2.1.0
       '@types/markdown-it': 14.1.2
-      '@vitejs/plugin-vue': 5.2.1(vite@5.4.14(@types/node@26.0.0))(vue@3.5.38)
+      '@vitejs/plugin-vue': 5.2.1(vite@5.4.14(@types/node@26.0.0)(terser@5.48.0))(vue@3.5.38)
       '@vue/devtools-api': 7.7.0
       '@vue/shared': 3.5.38
       '@vueuse/core': 12.4.0
@@ -6125,7 +6193,7 @@ snapshots:
       mark.js: 8.11.1
       minisearch: 7.2.0
       shiki: 2.1.0
-      vite: 5.4.14(@types/node@26.0.0)
+      vite: 5.4.14(@types/node@26.0.0)(terser@5.48.0)
       vue: 3.5.38
     optionalDependencies:
       postcss: 8.5.15
@@ -6156,7 +6224,7 @@ snapshots:
       - typescript
       - universal-cookie
 
-  vitest@2.0.0(@types/node@26.0.0)(jsdom@29.1.1):
+  vitest@2.0.0(@types/node@26.0.0)(jsdom@29.1.1)(terser@5.48.0):
     dependencies:
       '@ampproject/remapping': 2.3.0
       '@vitest/expect': 2.0.0
@@ -6173,8 +6241,8 @@ snapshots:
       std-env: 3.7.0
       tinybench: 2.9.0
       tinypool: 1.0.0
-      vite: 5.0.0(@types/node@26.0.0)
-      vite-node: 2.0.0(@types/node@26.0.0)
+      vite: 5.0.0(@types/node@26.0.0)(terser@5.48.0)
+      vite-node: 2.0.0(@types/node@26.0.0)(terser@5.48.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 26.0.0

@@ -2,9 +2,26 @@
 <html lang="zh-CN" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Agent Monitor - 智能体监控系统" />
+    <meta name="theme-color" content="#0f1117" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <title>Agent监控系统</title>
+    <!-- 预连接加速 -->
+    <link rel="preconnect" href="http://localhost:8000" />
+    <!-- 防止 FOUC — 在 CSS 加载前就设置背景色 -->
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #0f1117;
+        color: #e5e7eb;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
