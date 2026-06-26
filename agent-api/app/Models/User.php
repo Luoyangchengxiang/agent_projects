@@ -20,6 +20,7 @@ class User extends Authenticatable
         'permissions',
         'last_login_at',
         'last_login_ip',
+        'mascot_model_id',
     ];
 
     protected $hidden = [

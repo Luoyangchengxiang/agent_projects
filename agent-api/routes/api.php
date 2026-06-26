@@ -31,6 +31,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('auth')->group(function () {
         Route::get('/me', [App\Http\Controllers\Api\AuthController::class, 'me']);
         Route::post('/logout', [App\Http\Controllers\Api\AuthController::class, 'logout']);
+        Route::put('/mascot', [App\Http\Controllers\Api\AuthController::class, 'updateMascot']);
         Route::put('/password', [App\Http\Controllers\Api\AuthController::class, 'updatePassword']);
     });
 

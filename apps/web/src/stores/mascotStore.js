@@ -1,11 +1,13 @@
 /**
  * 看板娘状态管理
  * 管理形象选择、位置、交互状态
+ * 形象选择保存到后端，localStorage 仅作缓存
  */
 import create from 'zustand'
+import request from '../services/request'
 
+// 模型元数据（前端只存定义，不存文件）
 const MODEL_LIST = [
-  // Live2D 模型（真实动画形象）
   { id: 'shizuku', name: 'Shizuku', emoji: '👧', live2d: true, modelPath: '/live2d/models/shizuku/assets/shizuku.model.json', desc: '温柔少女，经典看板娘' },
   { id: 'miku', name: 'Miku', emoji: '🎤', live2d: true, modelPath: '/live2d/models/miku/assets/miku.model.json', desc: '初音未来，元气满满' },
   { id: 'haru', name: 'Haru', emoji: '🌸', live2d: true, modelPath: '/live2d/models/haru/01/assets/haru01.model.json', desc: '春日少女，活泼可爱' },
@@ -25,16 +27,14 @@ const MODEL_LIST = [
 const MASCOT_KEY = 'mascot_model_id'
 
 const useMascotStore = create((set, get) => ({
-  // 状态
+  // 状态 — 初始值从 localStorage 读取（缓存），登录后从后端同步
   modelId: localStorage.getItem(MASCOT_KEY) || null,
   isMenuOpen: false,
   menuPosition: { x: 0, y: 0 },
   isChatOpen: false,
   isHovering: false,
   isLoading: false,
-  // 互动模式：默认 false，点击菜单"互动"后激活
   interactMode: false,
-  // 设置面板
   isSettingsOpen: false,
 
   // 模型列表
@@ -46,10 +46,25 @@ const useMascotStore = create((set, get) => ({
     return MODEL_LIST.find((m) => m.id === modelId) || null
   },
 
-  // 选择模型（首次绑定）
-  selectModel: (modelId) => {
+  // 从后端用户数据同步看板娘选择（登录后调用）
+  syncFromUser: (mascotModelId) => {
+    if (mascotModelId) {
+      localStorage.setItem(MASCOT_KEY, mascotModelId)
+      set({ modelId: mascotModelId })
+    }
+  },
+
+  // 选择模型 — 同时保存到后端和 localStorage
+  selectModel: async (modelId) => {
     localStorage.setItem(MASCOT_KEY, modelId)
     set({ modelId })
+
+    // 异步保存到后端（不阻塞 UI）
+    try {
+      await request.put('/auth/mascot', { mascot_model_id: modelId })
+    } catch (err) {
+      console.warn('[Mascot] 保存到后端失败:', err.message)
+    }
   },
 
   // 检查是否已选择模型

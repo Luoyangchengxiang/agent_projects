@@ -6,6 +6,7 @@
 import create from 'zustand'
 import { authService } from '../services/authService'
 import { tokenManager } from '../services/tokenManager'
+import useMascotStore from './mascotStore'
 
 const useAuthStore = create((set, get) => ({
   // 状态
@@ -27,6 +28,10 @@ const useAuthStore = create((set, get) => ({
         isLoading: false,
         error: null,
       })
+      // 同步看板娘选择到 mascotStore
+      if (result.user?.mascot_model_id) {
+        useMascotStore.getState().syncFromUser(result.user.mascot_model_id)
+      }
       return result
     } catch (error) {
       console.error('[AuthStore] 登录失败:', error)
@@ -113,6 +118,10 @@ const useAuthStore = create((set, get) => ({
         const user = await authService.getCurrentUser()
         console.log('[AuthStore] 刷新用户信息成功:', user)
         set({ user, isAuthenticated: true })
+        // 同步看板娘选择
+        if (user?.mascot_model_id) {
+          useMascotStore.getState().syncFromUser(user.mascot_model_id)
+        }
       } catch (error) {
         console.error('[AuthStore] 刷新用户信息失败:', error)
         // 如果刷新失败，但有缓存，保持登录状态

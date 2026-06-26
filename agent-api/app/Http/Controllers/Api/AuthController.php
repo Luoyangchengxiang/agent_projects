@@ -82,6 +82,7 @@ class AuthController extends Controller
                         'name' => $admin->name,
                         'email' => $admin->email,
                         'role' => $admin->role,
+                        'mascot_model_id' => $admin->mascot_model_id,
                     ],
                     'token' => $token,
                     'is_local_login' => true,
@@ -123,10 +124,11 @@ class AuthController extends Controller
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
-                    'role' => $user->role,
-                ],
-                'token' => $token,
-                'is_local_login' => false,
+'role' => $user->role,
+                        'mascot_model_id' => $user->mascot_model_id,
+                    ],
+                    'token' => $token,
+                    'is_local_login' => false,
             ],
         ]);
     }
@@ -203,11 +205,36 @@ class AuthController extends Controller
                     'name' => $user->name,
                     'email' => $user->email,
                     'role' => $user->role,
+                    'mascot_model_id' => $user->mascot_model_id,
                     'status' => $user->status,
                     'last_login_at' => $user->last_login_at,
                     'last_login_ip' => $user->last_login_ip,
                     'created_at' => $user->created_at,
                 ],
+            ],
+        ]);
+    }
+
+    /**
+     * PUT /api/auth/mascot
+     * 更新看板娘形象
+     */
+    public function updateMascot(Request $request): JsonResponse
+    {
+        $request->validate([
+            'mascot_model_id' => 'required|string|max:50',
+        ]);
+
+        $user = $request->user();
+        $user->update([
+            'mascot_model_id' => $request->mascot_model_id,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => '看板娘形象已更新',
+            'data' => [
+                'mascot_model_id' => $user->mascot_model_id,
             ],
         ]);
     }
