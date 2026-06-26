@@ -51,12 +51,12 @@ function Reports() {
         page,
         per_page: pagination.pageSize,
       })
-      if (res.data.success) {
-        setReports(res.data.data)
+      if (res.success) {
+        setReports(res.data)
         setPagination({
           ...pagination,
           current: page,
-          total: res.data.pagination.total,
+          total: res.pagination.total,
         })
       }
     } catch (error) {
@@ -90,8 +90,8 @@ function Reports() {
           return
       }
 
-      if (res.data.success) {
-        message.success(res.data.message)
+      if (res.success) {
+        message.success(res.message)
         loadReports()
       }
     } catch (error) {
@@ -115,8 +115,8 @@ function Reports() {
       const endDate = customDateRange[1].format('YYYY-MM-DD')
       
       const res = await reportsApi.generateCustom(startDate, endDate)
-      if (res.data.success) {
-        message.success(res.data.message)
+      if (res.success) {
+        message.success(res.message)
         setCustomModalVisible(false)
         setCustomDateRange(null)
         loadReports()
@@ -155,7 +155,7 @@ function Reports() {
   const handleDelete = async (id) => {
     try {
       const res = await reportsApi.delete(id)
-      if (res.data.success) {
+      if (res.success) {
         message.success('删除成功')
         loadReports(pagination.current)
       }
