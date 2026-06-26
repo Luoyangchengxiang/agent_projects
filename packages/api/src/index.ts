@@ -99,6 +99,44 @@ export const executionLogApi = {
   }
 }
 
+// 错误日志相关API
+export const errorLogApi = {
+  // 获取错误日志列表
+  getList(params?: PaginationParams & { status?: string; error_type?: string }): Promise<ApiResponse<PaginatedResponse<any>>> {
+    return api.get('/error-logs', { params })
+  },
+
+  // 获取错误日志详情
+  getById(id: number): Promise<ApiResponse<any>> {
+    return api.get(`/error-logs/${id}`)
+  },
+
+  // 获取错误统计
+  getStats(): Promise<ApiResponse<any>> {
+    return api.get('/error-logs/stats')
+  },
+
+  // 获取错误类型列表
+  getTypes(): Promise<ApiResponse<string[]>> {
+    return api.get('/error-logs/types')
+  },
+
+  // 标记为已解决
+  resolve(id: number): Promise<ApiResponse<any>> {
+    return api.put(`/error-logs/${id}/resolve`)
+  },
+
+  // 删除错误日志
+  delete(id: number): Promise<ApiResponse<void>> {
+    return api.delete(`/error-logs/${id}`)
+  },
+
+  // 批量删除
+  batchDestroy(ids: number[]): Promise<ApiResponse<void>> {
+    return api.post('/error-logs/batch-destroy', { ids })
+  }
+}
+
 // 仪表盘相关API
 export const dashboardApi = {
   // 获取统计数据
@@ -119,6 +157,38 @@ export const dashboardApi = {
   // 获取智能体组列表
   getAgentGroups(): Promise<ApiResponse<Array<{ agent_group: string; count: number }>>> {
     return api.get('/dashboard/agent-groups')
+  }
+}
+
+// 权限管理相关API
+export const permissionApi = {
+  // 获取当前用户权限信息
+  getMe(): Promise<ApiResponse<{
+    id: number
+    name: string
+    email: string
+    role: string
+    role_name: string
+    permissions: string[]
+    can_view_full_execution: boolean
+    can_manage_users: boolean
+  }>> {
+    return api.get('/permissions/me')
+  },
+
+  // 获取用户列表（管理员）
+  getUsers(params?: { search?: string; role?: string; page?: number; per_page?: number }): Promise<ApiResponse<PaginatedResponse<any>>> {
+    return api.get('/permissions/users', { params })
+  },
+
+  // 更新用户角色
+  updateRole(userId: number, role: string): Promise<ApiResponse<any>> {
+    return api.put(`/permissions/users/${userId}/role`, { role })
+  },
+
+  // 更新用户权限
+  updatePermissions(userId: number, permissions: string[]): Promise<ApiResponse<any>> {
+    return api.put(`/permissions/users/${userId}/permissions`, { permissions })
   }
 }
 

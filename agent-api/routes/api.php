@@ -72,4 +72,12 @@ Route::middleware('auth:sanctum')->group(function () {
         // 系统状态
         Route::get('/status', [App\Http\Controllers\Api\ChatController::class, 'status']);
     });
+
+    // ==================== 权限管理 ====================
+    Route::prefix('permissions')->group(function () {
+        Route::get('/me', [App\Http\Controllers\Api\PermissionController::class, 'me']);
+        Route::get('/users', [App\Http\Controllers\Api\PermissionController::class, 'index']);
+        Route::put('/users/{id}/role', [App\Http\Controllers\Api\PermissionController::class, 'updateRole']);
+        Route::put('/users/{id}/permissions', [App\Http\Controllers\Api\PermissionController::class, 'updatePermissions']);
+    });
 });

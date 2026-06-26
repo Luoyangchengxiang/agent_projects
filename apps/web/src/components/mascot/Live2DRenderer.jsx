@@ -1,9 +1,10 @@
 /**
  * Live2D 渲染组件
- * 支持 Live2D SDK 或静态图片 fallback
+ * 支持 Live2D SDK 或 SVG 动漫小猫 fallback
  */
 import { useEffect, useRef, useState } from 'react'
 import useMascotStore from '../../stores/mascotStore'
+import CatAvatar from './CatAvatar'
 
 // 检测 Live2D SDK 是否可用
 const isLive2DAvailable = () => {
@@ -15,6 +16,7 @@ export default function Live2DRenderer({ onHover, onClick }) {
   const { getCurrentModel, setLoading } = useMascotStore()
   const [useStatic, setUseStatic] = useState(!isLive2DAvailable())
   const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 })
+  const [expression, setExpression] = useState('normal')
 
   // 鼠标跟随效果（静态模式）
   const handleMouseMove = (e) => {
@@ -24,6 +26,15 @@ export default function Live2DRenderer({ onHover, onClick }) {
       x: (e.clientX - rect.left) / rect.width,
       y: (e.clientY - rect.top) / rect.height,
     })
+  }
+
+  // 点击切换表情
+  const handleClick = () => {
+    const expressions = ['normal', 'happy', 'surprised']
+    const currentIndex = expressions.indexOf(expression)
+    const nextIndex = (currentIndex + 1) % expressions.length
+    setExpression(expressions[nextIndex])
+    onClick?.(['body'])
   }
 
   // 尝试加载 Live2D
@@ -47,8 +58,8 @@ export default function Live2DRenderer({ onHover, onClick }) {
 
         const app = new PIXI.Application({
           view: canvasRef.current,
-          width: 300,
-          height: 400,
+          width: 150,
+          height: 150,
           backgroundAlpha: 0,
           antialias: true,
         })
@@ -58,10 +69,10 @@ export default function Live2DRenderer({ onHover, onClick }) {
           autoUpdate: true,
         })
 
-        model.scale.set(0.25)
+        model.scale.set(0.12)
         model.anchor.set(0.5, 0.5)
-        model.x = 150
-        model.y = 350
+        model.x = 75
+        model.y = 130
 
         model.on('hit', (hitAreas) => {
           if (onClick) onClick(hitAreas)
@@ -82,7 +93,7 @@ export default function Live2DRenderer({ onHover, onClick }) {
           app.destroy(true)
         }
       } catch (e) {
-        console.warn('Live2D 加载失败，使用静态模式:', e)
+        console.warn('Live2D 加载失败，使用 SVG 小猫:', e)
         setUseStatic(true)
         setLoading(false)
       }
@@ -91,19 +102,17 @@ export default function Live2DRenderer({ onHover, onClick }) {
     loadLive2D()
   }, [getCurrentModel()?.id])
 
-  // 静态看板娘（CSS 动画）
+  // 静态看板娘（SVG 动漫小猫）
   if (useStatic) {
     const currentModel = getCurrentModel()
-    const eyeX = (mousePos.x - 0.5) * 8
-    const eyeY = (mousePos.y - 0.5) * 4
 
     return (
       <div 
         ref={canvasRef}
         className="mascot-static"
         style={{
-          width: 300,
-          height: 400,
+          width: 150,
+          height: 150,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -114,49 +123,19 @@ export default function Live2DRenderer({ onHover, onClick }) {
         onMouseMove={handleMouseMove}
         onMouseEnter={() => onHover?.(true)}
         onMouseLeave={() => onHover?.(false)}
-        onClick={() => onClick?.(['body'])}
+        onClick={handleClick}
       >
-        {/* 静态 SVG 看板娘 */}
-        <svg width="200" height="280" viewBox="0 0 200 280">
-          {/* 头发 */}
-          <ellipse cx="100" cy="90" rx="65" ry="70" fill="#2d1b4e" />
-          <ellipse cx="100" cy="85" rx="60" ry="65" fill="#3d2b5e" />
-          
-          {/* 脸 */}
-          <ellipse cx="100" cy="100" rx="50" ry="55" fill="#ffe0c2" />
-          
-          {/* 眼睛 - 跟随鼠标 */}
-          <g transform={`translate(${eyeX}, ${eyeY})`}>
-            <ellipse cx="78" cy="95" rx="8" ry="10" fill="white" />
-            <ellipse cx="122" cy="95" rx="8" ry="10" fill="white" />
-            <circle cx="78" cy="95" r="5" fill="#6366f1" />
-            <circle cx="122" cy="95" r="5" fill="#6366f1" />
-            <circle cx="78" cy="93" r="2" fill="white" />
-            <circle cx="122" cy="93" r="2" fill="white" />
-          </g>
-          
-          {/* 嘴巴 */}
-          <path d="M 90 115 Q 100 120 110 115" stroke="#e88" strokeWidth="2" fill="none" />
-          
-          {/* 身体 */}
-          <path d="M 60 150 Q 60 140 100 135 Q 140 140 140 150 L 150 250 Q 100 260 50 250 Z" fill="#6366f1" />
-          
-          {/* 装饰 */}
-          <circle cx="80" cy="160" r="4" fill="#f472b6" />
-          <circle cx="120" cy="160" r="4" fill="#f472b6" />
-          
-          {/* 蝴蝶结 */}
-          <path d="M 85 130 L 70 120 L 85 135 L 100 130 L 115 135 L 130 120 L 115 130" fill="#f472b6" />
-        </svg>
+        {/* SVG 动漫小猫 */}
+        <CatAvatar size={120} expression={expression} />
         
         {/* 名字 */}
         <div style={{
-          marginTop: 10,
-          color: '#a78bfa',
-          fontSize: 14,
+          marginTop: 5,
+          color: '#FF69B4',
+          fontSize: 12,
           fontWeight: 500,
         }}>
-          {currentModel?.name || '看板娘'}
+          {currentModel?.name || '小猫咪'}
         </div>
         
         {/* 呼吸动画指示器 */}
@@ -165,7 +144,7 @@ export default function Live2DRenderer({ onHover, onClick }) {
           height: 6,
           borderRadius: '50%',
           background: '#4ade80',
-          marginTop: 8,
+          marginTop: 5,
           animation: 'pulse 2s infinite',
         }} />
       </div>
@@ -176,8 +155,8 @@ export default function Live2DRenderer({ onHover, onClick }) {
   return (
     <canvas
       ref={canvasRef}
-      width={300}
-      height={400}
+      width={150}
+      height={150}
       style={{ cursor: 'pointer' }}
       onMouseEnter={() => onHover?.(true)}
       onMouseLeave={() => onHover?.(false)}

@@ -1,8 +1,8 @@
 /**
- * 看板娘主组件
- * 整合 Live2D 渲染、环状菜单、客服对话
+ * 可拖拽的看板娘组件
+ * 支持拖拽改变位置、位置记忆
  */
-import { useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import useMascotStore from '../../stores/mascotStore'
 import useChatStore from '../../stores/chatStore'
 import Live2DRenderer from './Live2DRenderer'
@@ -26,12 +26,75 @@ export default function Mascot() {
   } = useMascotStore()
 
   const { reset: resetChat } = useChatStore()
+  
+  // 拖拽相关状态
+  const [position, setPosition] = useState(() => {
+    const saved = localStorage.getItem('mascot-position')
+    return saved ? JSON.parse(saved) : { x: window.innerWidth - 200, y: window.innerHeight - 250 }
+  })
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
+  const mascotRef = useRef(null)
+
+  // 保存位置到 localStorage
+  useEffect(() => {
+    localStorage.setItem('mascot-position', JSON.stringify(position))
+  }, [position])
+
+  // 鼠标按下 - 开始拖拽
+  const handleMouseDown = useCallback((e) => {
+    if (e.button !== 0) return // 只响应左键
+    
+    const rect = mascotRef.current.getBoundingClientRect()
+    setDragOffset({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    })
+    setIsDragging(true)
+    e.preventDefault()
+  }, [])
+
+  // 鼠标移动 - 拖拽中
+  const handleMouseMove = useCallback((e) => {
+    if (!isDragging) return
+    
+    const newX = e.clientX - dragOffset.x
+    const newY = e.clientY - dragOffset.y
+    
+    // 限制在视口范围内
+    const maxX = window.innerWidth - 150
+    const maxY = window.innerHeight - 150
+    
+    setPosition({
+      x: Math.max(0, Math.min(newX, maxX)),
+      y: Math.max(0, Math.min(newY, maxY))
+    })
+  }, [isDragging, dragOffset])
+
+  // 鼠标释放 - 结束拖拽
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false)
+  }, [])
+
+  // 添加全局鼠标事件监听
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove)
+      window.addEventListener('mouseup', handleMouseUp)
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove)
+        window.removeEventListener('mouseup', handleMouseUp)
+      }
+    }
+  }, [isDragging, handleMouseMove, handleMouseUp])
 
   // 未选择模型时不显示
   if (!hasSelectedModel()) return null
 
-  // 点击看板娘 → 打开环状菜单
+  // 点击看板娘 → 打开环状菜单（仅在非拖拽状态下）
   const handleClick = (e) => {
+    if (isDragging) return
+    
     const rect = e.currentTarget.getBoundingClientRect()
     const x = rect.left + rect.width / 2
     const y = rect.top + rect.height / 2
@@ -61,19 +124,30 @@ export default function Mascot() {
   }
 
   return (
-    <div className="mascot-container">
+    <div 
+      ref={mascotRef}
+      className={`mascot-container ${isDragging ? 'mascot-dragging' : ''}`}
+      style={{
+        position: 'fixed',
+        left: `${position.x}px`,
+        top: `${position.y}px`,
+        zIndex: 9999,
+        cursor: isDragging ? 'grabbing' : 'grab'
+      }}
+      onMouseDown={handleMouseDown}
+      onClick={handleClick}
+    >
       {/* Live2D 看板娘 */}
       <div
         className={`mascot-character ${isHovering ? 'mascot-character--hover' : ''}`}
-        onClick={handleClick}
       >
         <Live2DRenderer
           onHover={setHovering}
-          onClick={() => handleClick({ currentTarget: document.querySelector('.mascot-character') })}
+          onClick={() => {}}
         />
 
         {/* Hover 提示 */}
-        {isHovering && !isMenuOpen && (
+        {isHovering && !isMenuOpen && !isDragging && (
           <div className="mascot-tooltip">
             <span>❓ 点我互动</span>
           </div>

@@ -7,6 +7,7 @@ import zhCN from 'antd/locale/zh_CN'
 import App from './App'
 import './styles/variables.css'
 import './styles/components.css'
+import './styles/notification.css'
 
 // 创建QueryClient
 const queryClient = new QueryClient({

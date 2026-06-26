@@ -3,35 +3,40 @@
  */
 
 .mascot-container {
-  position: fixed;
-  bottom: 0;
-  right: 20px;
-  z-index: 998;
-  pointer-events: none;
+  pointer-events: auto;
+  transition: box-shadow 0.3s ease;
+}
+
+.mascot-container:hover {
+  filter: drop-shadow(0 4px 12px rgba(255, 105, 180, 0.4));
+}
+
+.mascot-container.mascot-dragging {
+  opacity: 0.9;
+  filter: drop-shadow(0 8px 20px rgba(255, 105, 180, 0.6));
 }
 
 .mascot-character {
-  pointer-events: auto;
-  cursor: pointer;
+  cursor: grab;
   position: relative;
   transition: transform 0.3s ease;
 }
 
 .mascot-character--hover {
-  transform: translateY(-5px);
+  transform: translateY(-3px);
 }
 
 /* Hover 提示 */
 .mascot-tooltip {
   position: absolute;
-  top: -40px;
+  top: -35px;
   left: 50%;
   transform: translateX(-50%);
   background: rgba(26, 26, 46, 0.95);
   color: #e0e0e0;
   padding: 6px 14px;
   border-radius: 20px;
-  font-size: 13px;
+  font-size: 12px;
   white-space: nowrap;
   border: 1px solid rgba(255, 255, 255, 0.1);
   animation: mascotTooltipIn 0.3s ease;
@@ -67,8 +72,8 @@
 .mascot-loading-spinner {
   width: 30px;
   height: 30px;
-  border: 3px solid rgba(0, 212, 255, 0.2);
-  border-top-color: #00d4ff;
+  border: 3px solid rgba(255, 105, 180, 0.2);
+  border-top-color: #FF69B4;
   border-radius: 50%;
   animation: mascotSpin 0.8s linear infinite;
 }
@@ -81,8 +86,8 @@
 .mascot-chat-wrapper {
   position: fixed;
   bottom: 20px;
-  right: 320px;
-  z-index: 1000;
+  right: 200px;
+  z-index: 10000;
   pointer-events: auto;
 }
 
@@ -103,16 +108,21 @@
   transform: scale(1.05);
 }
 
-.mascot-static svg {
-  filter: drop-shadow(0 4px 12px rgba(99, 102, 241, 0.3));
+.mascot-static svg.cat-avatar {
+  filter: drop-shadow(0 4px 8px rgba(255, 105, 180, 0.3));
 }
 
 @keyframes mascotFloat {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+  50% { transform: translateY(-5px); }
 }
 
 @keyframes pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.5; transform: scale(1.2); }
+}
+
+/* 环状菜单样式覆盖 */
+.radial-menu {
+  z-index: 10001;
 }

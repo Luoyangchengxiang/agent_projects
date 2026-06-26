@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
-import { Table, Tag, Select, DatePicker, Space, App, Button, Modal } from 'antd'
-import { LoadingOutlined, EyeOutlined, DownOutlined, UpOutlined } from '@ant-design/icons'
+import { Table, Tag, Select, DatePicker, Space, App, Button, Modal, Tooltip } from 'antd'
+import { LoadingOutlined, EyeOutlined, DownOutlined, UpOutlined, LockOutlined } from '@ant-design/icons'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { executionLogApi } from '@agent-monitor/api'
+import { executionLogApi, permissionApi } from '@agent-monitor/api'
 
 function ExecutionLogs() {
   const { message } = App.useApp()
@@ -13,6 +13,7 @@ function ExecutionLogs() {
   const [selectedLog, setSelectedLog] = useState(null)
   const [detailVisible, setDetailVisible] = useState(false)
   const [summaryExpanded, setSummaryExpanded] = useState(false)
+  const [userPermissions, setUserPermissions] = useState(null)
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 20,
@@ -20,8 +21,21 @@ function ExecutionLogs() {
   })
 
   useEffect(() => {
+    loadUserPermissions()
     loadLogs()
   }, [pagination.current, pagination.pageSize, statusFilter])
+
+  // 加载用户权限
+  const loadUserPermissions = async () => {
+    try {
+      const response = await permissionApi.getMe()
+      if (response.success) {
+        setUserPermissions(response.data)
+      }
+    } catch (error) {
+      console.error('加载权限失败:', error)
+    }
+  }
 
   const loadLogs = async () => {
     setLoading(true)
@@ -45,6 +59,11 @@ function ExecutionLogs() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // 检查是否可以查看完整结果
+  const canViewFullResult = () => {
+    return userPermissions?.can_view_full_execution || false
   }
 
   const columns = [
@@ -132,18 +151,24 @@ function ExecutionLogs() {
         if (!record.result_summary && !record.output) {
           return <span className="text-muted">-</span>
         }
+
+        // 根据权限显示不同提示
+        const hasFullAccess = canViewFullResult()
+        
         return (
-          <Button
-            type="link"
-            size="small"
-            icon={<EyeOutlined />}
-            onClick={() => {
-              setSelectedLog(record)
-              setDetailVisible(true)
-            }}
-          >
-            查看
-          </Button>
+          <Tooltip title={hasFullAccess ? '点击查看完整结果' : '点击查看摘要（VIP 可查看完整内容）'}>
+            <Button
+              type="link"
+              size="small"
+              icon={hasFullAccess ? <EyeOutlined /> : <LockOutlined />}
+              onClick={() => {
+                setSelectedLog(record)
+                setDetailVisible(true)
+              }}
+            >
+              {hasFullAccess ? '查看' : '摘要'}
+            </Button>
+          </Tooltip>
         )
       }
     }
@@ -158,7 +183,14 @@ function ExecutionLogs() {
       {/* 页面标题 */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-primary">执行日志</h1>
-        <p className="text-secondary mt-1">查看所有Agent的执行记录</p>
+        <p className="text-secondary mt-1">
+          查看所有Agent的执行记录
+          {!canViewFullResult() && (
+            <span className="ml-2 text-yellow-500 text-sm">
+              （当前为普通用户，仅可查看摘要）
+            </span>
+          )}
+        </p>
       </div>
 
       {/* 筛选栏 */}
@@ -243,6 +275,7 @@ function ExecutionLogs() {
               </div>
             </div>
 
+            {/* 结果摘要 - 所有用户可见 */}
             {selectedLog.result_summary && (
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
@@ -271,39 +304,55 @@ function ExecutionLogs() {
               </div>
             )}
 
+            {/* 完整输出 - 仅 VIP 和管理员可见 */}
             {selectedLog.output && (
               <div>
-                <h4 className="text-sm font-medium text-gray-300 mb-2">完整输出</h4>
-                <div className="p-4 bg-gray-900 rounded text-sm text-gray-200 max-h-96 overflow-auto markdown-body">
-                  <ReactMarkdown 
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      h1: ({node, ...props}) => <h1 className="text-2xl font-bold text-white mb-4 mt-6" {...props} />,
-                      h2: ({node, ...props}) => <h2 className="text-xl font-semibold text-white mb-3 mt-5" {...props} />,
-                      h3: ({node, ...props}) => <h3 className="text-lg font-medium text-white mb-2 mt-4" {...props} />,
-                      p: ({node, ...props}) => <p className="mb-3 leading-relaxed" {...props} />,
-                      ul: ({node, ...props}) => <ul className="list-disc pl-6 mb-3 space-y-1" {...props} />,
-                      ol: ({node, ...props}) => <ol className="list-decimal pl-6 mb-3 space-y-1" {...props} />,
-                      li: ({node, ...props}) => <li className="text-gray-200" {...props} />,
-                      strong: ({node, ...props}) => <strong className="font-semibold text-white" {...props} />,
-                      em: ({node, ...props}) => <em className="italic text-gray-300" {...props} />,
-                      code: ({node, inline, ...props}) => 
-                        inline 
-                          ? <code className="px-1.5 py-0.5 bg-gray-800 rounded text-sm text-emerald-400 font-mono" {...props} />
-                          : <code className="block p-3 bg-gray-800 rounded text-sm text-gray-200 font-mono overflow-x-auto" {...props} />,
-                      pre: ({node, ...props}) => <pre className="mb-3 rounded overflow-hidden" {...props} />,
-                      blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-blue-500 pl-4 italic text-gray-400 mb-3" {...props} />,
-                      table: ({node, ...props}) => <table className="w-full border-collapse mb-3" {...props} />,
-                      thead: ({node, ...props}) => <thead className="bg-gray-800" {...props} />,
-                      th: ({node, ...props}) => <th className="px-4 py-2 text-left text-white font-medium border border-gray-700" {...props} />,
-                      td: ({node, ...props}) => <td className="px-4 py-2 border border-gray-700" {...props} />,
-                      hr: ({node, ...props}) => <hr className="border-gray-700 my-4" {...props} />,
-                      a: ({node, ...props}) => <a className="text-blue-400 hover:text-blue-300 underline" {...props} />,
-                    }}
-                  >
-                    {selectedLog.output}
-                  </ReactMarkdown>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-medium text-gray-300">完整输出</h4>
+                  {!canViewFullResult() && (
+                    <span className="text-xs text-yellow-500 flex items-center gap-1">
+                      <LockOutlined /> 升级 VIP 查看完整内容
+                    </span>
+                  )}
                 </div>
+                {canViewFullResult() ? (
+                  <div className="p-4 bg-gray-900 rounded text-sm text-gray-200 max-h-96 overflow-auto markdown-body">
+                    <ReactMarkdown 
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        h1: ({node, ...props}) => <h1 className="text-2xl font-bold text-white mb-4 mt-6" {...props} />,
+                        h2: ({node, ...props}) => <h2 className="text-xl font-semibold text-white mb-3 mt-5" {...props} />,
+                        h3: ({node, ...props}) => <h3 className="text-lg font-medium text-white mb-2 mt-4" {...props} />,
+                        p: ({node, ...props}) => <p className="mb-3 leading-relaxed" {...props} />,
+                        ul: ({node, ...props}) => <ul className="list-disc pl-6 mb-3 space-y-1" {...props} />,
+                        ol: ({node, ...props}) => <ol className="list-decimal pl-6 mb-3 space-y-1" {...props} />,
+                        li: ({node, ...props}) => <li className="text-gray-200" {...props} />,
+                        strong: ({node, ...props}) => <strong className="font-semibold text-white" {...props} />,
+                        em: ({node, ...props}) => <em className="italic text-gray-300" {...props} />,
+                        code: ({node, inline, ...props}) => 
+                          inline 
+                            ? <code className="px-1.5 py-0.5 bg-gray-800 rounded text-sm text-emerald-400 font-mono" {...props} />
+                            : <code className="block p-3 bg-gray-800 rounded text-sm text-gray-200 font-mono overflow-x-auto" {...props} />,
+                        pre: ({node, ...props}) => <pre className="mb-3 rounded overflow-hidden" {...props} />,
+                        blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-blue-500 pl-4 italic text-gray-400 mb-3" {...props} />,
+                        table: ({node, ...props}) => <table className="w-full border-collapse mb-3" {...props} />,
+                        thead: ({node, ...props}) => <thead className="bg-gray-800" {...props} />,
+                        th: ({node, ...props}) => <th className="px-4 py-2 text-left text-white font-medium border border-gray-700" {...props} />,
+                        td: ({node, ...props}) => <td className="px-4 py-2 border border-gray-700" {...props} />,
+                        hr: ({node, ...props}) => <hr className="border-gray-700 my-4" {...props} />,
+                        a: ({node, ...props}) => <a className="text-blue-400 hover:text-blue-300 underline" {...props} />,
+                      }}
+                    >
+                      {selectedLog.output}
+                    </ReactMarkdown>
+                  </div>
+                ) : (
+                  <div className="p-8 bg-gray-900 rounded text-center">
+                    <LockOutlined className="text-4xl text-gray-600 mb-3" />
+                    <p className="text-gray-400">完整内容仅对 VIP 用户和管理员开放</p>
+                    <p className="text-sm text-gray-500 mt-1">升级 VIP 即可查看完整执行结果</p>
+                  </div>
+                )}
               </div>
             )}
 

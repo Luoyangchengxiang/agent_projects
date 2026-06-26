@@ -7,7 +7,9 @@ import {
   CustomerServiceOutlined,
   LogoutOutlined,
   UserOutlined,
+  TeamOutlined,
 } from '@ant-design/icons'
+import { Badge } from 'antd'
 import useAuthStore from '../stores/authStore'
 
 const menuItems = [
@@ -16,6 +18,7 @@ const menuItems = [
   { path: '/logs', icon: <FileTextOutlined />, label: '执行日志' },
   { path: '/errors', icon: <BugOutlined />, label: '错误日志' },
   { path: '/chat', icon: <CustomerServiceOutlined />, label: '客服管理' },
+  { path: '/permissions', icon: <TeamOutlined />, label: '权限管理', adminOnly: true },
 ]
 
 function Sidebar() {
@@ -27,6 +30,14 @@ function Sidebar() {
     navigate('/login', { replace: true })
   }
 
+  // 根据用户角色过滤菜单
+  const filteredMenuItems = menuItems.filter(item => {
+    if (item.adminOnly) {
+      return user?.role === 'admin'
+    }
+    return true
+  })
+
   return (
     <div className="sidebar">
       {/* Logo */}
@@ -37,7 +48,7 @@ function Sidebar() {
 
       {/* 导航菜单 */}
       <nav className="mt-4 px-3">
-        {menuItems.map((item) => (
+        {filteredMenuItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
@@ -65,7 +76,9 @@ function Sidebar() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm text-primary truncate">{user?.name || '用户'}</p>
-            <p className="text-xs text-muted truncate">{user?.email || ''}</p>
+            <p className="text-xs text-muted truncate">
+              {user?.role === 'admin' ? '管理员' : user?.role === 'vip' ? 'VIP 用户' : '普通用户'}
+            </p>
           </div>
         </div>
 

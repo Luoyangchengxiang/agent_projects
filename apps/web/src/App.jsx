@@ -10,6 +10,7 @@ import ChatAdmin from './pages/ChatAdmin'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import MascotSelect from './pages/MascotSelect'
+import PermissionManagement from './pages/PermissionManagement'
 import useAuthStore from './stores/authStore'
 import useMascotStore from './stores/mascotStore'
 
@@ -76,6 +77,7 @@ function App() {
         <Route path="logs" element={<ExecutionLogs />} />
         <Route path="errors" element={<ErrorLogs />} />
         <Route path="chat" element={<ChatAdmin />} />
+        <Route path="permissions" element={<PermissionManagement />} />
       </Route>
     </Routes>
   )
