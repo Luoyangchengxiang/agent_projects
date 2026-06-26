@@ -1,33 +1,45 @@
 /**
  * Live2D 看板娘渲染组件
  * 优先加载 Live2D 模型，失败则回退到 CatAvatar SVG
- * 使用全局 loadlive2d 函数（由 l2d.js 提供）
+ * 支持动态切换模型
  */
 import { useState, useEffect, useRef, useCallback } from 'react'
 import useMascotStore from '../../stores/mascotStore'
 import CatAvatar from './CatAvatar'
 
-// 默认模型路径（相对于 public 目录）
-const LIVE2D_MODEL_PATH = '/live2d/models/shizuku/assets/shizuku.model.json'
 // 加载超时时间（毫秒）
 const LOAD_TIMEOUT = 8000
 
 export default function Live2DRenderer({ onHover, onClick }) {
   const { getCurrentModel } = useMascotStore()
+  const currentModel = getCurrentModel()
   const [expression, setExpression] = useState('normal')
   const [live2dFailed, setLive2dFailed] = useState(false)
   const [live2dReady, setLive2dReady] = useState(false)
   const canvasRef = useRef(null)
-  const loadAttempted = useRef(false)
   const readyRef = useRef(false)
+  const timeoutRef = useRef(null)
+  const innerTimeoutRef = useRef(null)
+  const prevModelIdRef = useRef(null)
 
   // 同步 ready 状态到 ref
   useEffect(() => { readyRef.current = live2dReady }, [live2dReady])
 
-  // 尝试加载 Live2D 模型
+  // 获取当前模型路径
+  const modelPath = currentModel?.live2d ? currentModel.modelPath : null
+
+  // 加载 Live2D 模型
   useEffect(() => {
-    if (loadAttempted.current) return
-    loadAttempted.current = true
+    // 清理之前的超时
+    if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    if (innerTimeoutRef.current) clearTimeout(innerTimeoutRef.current)
+
+    // 如果不是 Live2D 模型，直接标记失败（显示 CatAvatar）
+    if (!modelPath) {
+      setLive2dFailed(true)
+      setLive2dReady(false)
+      return
+    }
 
     // 检查 loadlive2d 是否可用
     if (typeof window.loadlive2d !== 'function') {
@@ -36,10 +48,12 @@ export default function Live2DRenderer({ onHover, onClick }) {
       return
     }
 
-    let innerTimeout = null
+    // 重置状态（模型切换时）
+    setLive2dFailed(false)
+    setLive2dReady(false)
 
     // 超时保护
-    const timeout = setTimeout(() => {
+    timeoutRef.current = setTimeout(() => {
       if (!readyRef.current) {
         console.warn('[Live2D] 加载超时，回退到 CatAvatar')
         setLive2dFailed(true)
@@ -47,30 +61,28 @@ export default function Live2DRenderer({ onHover, onClick }) {
     }, LOAD_TIMEOUT)
 
     try {
-      window.loadlive2d('live2d-canvas', LIVE2D_MODEL_PATH, 0.5)
-      innerTimeout = setTimeout(() => {
+      window.loadlive2d('live2d-canvas', modelPath, 0.5)
+      innerTimeoutRef.current = setTimeout(() => {
         const canvas = document.getElementById('live2d-canvas')
         if (canvas && canvas.width > 0) {
           setLive2dReady(true)
-          clearTimeout(timeout)
+          clearTimeout(timeoutRef.current)
         } else {
           setLive2dFailed(true)
-          clearTimeout(timeout)
+          clearTimeout(timeoutRef.current)
         }
       }, 3000)
     } catch (err) {
       console.warn('[Live2D] 加载失败:', err)
       setLive2dFailed(true)
-      clearTimeout(timeout)
+      clearTimeout(timeoutRef.current)
     }
 
     return () => {
-      clearTimeout(timeout)
-      if (innerTimeout) clearTimeout(innerTimeout)
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+      if (innerTimeoutRef.current) clearTimeout(innerTimeoutRef.current)
     }
-  }, []) // 只在挂载时执行一次
-
-  const currentModel = getCurrentModel()
+  }, [modelPath]) // 模型路径变化时重新加载
 
   // 点击切换表情（SVG 模式）
   const handleClick = useCallback(() => {
@@ -81,6 +93,9 @@ export default function Live2DRenderer({ onHover, onClick }) {
     }
     onClick?.()
   }, [live2dFailed, live2dReady, expression, onClick])
+
+  const displayName = currentModel?.name || '小猫咪'
+  const isLive2dModel = currentModel?.live2d === true
 
   return (
     <div
@@ -101,7 +116,7 @@ export default function Live2DRenderer({ onHover, onClick }) {
       onClick={handleClick}
     >
       {/* Live2D Canvas（始终存在，成功加载后显示） */}
-      {!live2dFailed && (
+      {isLive2dModel && !live2dFailed && (
         <canvas
           id="live2d-canvas"
           ref={canvasRef}
@@ -119,8 +134,8 @@ export default function Live2DRenderer({ onHover, onClick }) {
         />
       )}
 
-      {/* 回退：CatAvatar SVG（Live2D 失败或未就绪时显示） */}
-      {(live2dFailed || !live2dReady) && (
+      {/* 回退：CatAvatar SVG（非 Live2D 模型 或 Live2D 失败时显示） */}
+      {(!isLive2dModel || live2dFailed || !live2dReady) && (
         <>
           <CatAvatar
             size={120}
@@ -134,7 +149,7 @@ export default function Live2DRenderer({ onHover, onClick }) {
             fontSize: 12,
             fontWeight: 500,
           }}>
-            {currentModel?.name || '小猫咪'}
+            {displayName}
           </div>
           {/* 呼吸动画指示器 */}
           <div style={{
@@ -149,7 +164,7 @@ export default function Live2DRenderer({ onHover, onClick }) {
       )}
 
       {/* Live2D 加载中指示 */}
-      {!live2dFailed && !live2dReady && (
+      {isLive2dModel && !live2dFailed && !live2dReady && (
         <div style={{
           position: 'absolute',
           top: '50%',

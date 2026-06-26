@@ -1,7 +1,7 @@
 /**
  * 看板娘形象选择页面
  * 首次登录时选择，绑定用户后不可更改
- * 左侧选择列表 + 右侧实时预览
+ * 左侧选择列表 + 右侧实时预览（支持 Live2D）
  */
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -35,7 +35,7 @@ export default function MascotSelect() {
         {/* 头部 */}
         <div className="mascot-select-header">
           <h1>🎭 选择你的看板娘</h1>
-          <p>选择一个你喜欢的形象，它将陪伴你使用系统（选定后不可更改）</p>
+          <p>选择一个你喜欢的形象，它将陪伴你使用系统（选定后可随时在设置中更换）</p>
         </div>
 
         {/* 主体：左侧列表 + 右侧预览 */}
@@ -50,8 +50,20 @@ export default function MascotSelect() {
               >
                 <div className="mascot-select-item-emoji">{model.emoji}</div>
                 <div className="mascot-select-item-info">
-                  <div className="mascot-select-item-name">{model.name}</div>
-                  <div className="mascot-select-item-id">{model.id}</div>
+                  <div className="mascot-select-item-name">
+                    {model.name}
+                    {model.live2d && (
+                      <span style={{
+                        marginLeft: 6,
+                        fontSize: 10,
+                        background: 'rgba(6, 182, 212, 0.2)',
+                        color: '#06b6d4',
+                        padding: '1px 5px',
+                        borderRadius: 4,
+                      }}>Live2D</span>
+                    )}
+                  </div>
+                  <div className="mascot-select-item-id">{model.desc || model.id}</div>
                 </div>
                 {selected === model.id && (
                   <div className="mascot-select-item-check">
@@ -73,10 +85,14 @@ export default function MascotSelect() {
                   {selectedModel.name}
                 </div>
                 <div className="mascot-select-preview-desc">
-                  选择此形象作为你的看板娘
+                  {selectedModel.desc || '选择此形象作为你的看板娘'}
                 </div>
                 <div className="mascot-select-preview-model">
-                  <CatAvatar size={180} expression="happy" modelId={selectedModel.id} />
+                  {selectedModel.live2d ? (
+                    <Live2DPreview modelPath={selectedModel.modelPath} />
+                  ) : (
+                    <CatAvatar size={180} expression="happy" modelId={selectedModel.id} />
+                  )}
                 </div>
               </>
             ) : (
@@ -103,7 +119,7 @@ export default function MascotSelect() {
               </>
             ) : selected ? (
               <>
-                <LockOutlined /> 确认选择（不可更改） <ArrowRightOutlined />
+                <LockOutlined /> 确认选择 <ArrowRightOutlined />
               </>
             ) : (
               '请先选择一个形象'
@@ -111,6 +127,84 @@ export default function MascotSelect() {
           </button>
         </div>
       </div>
+    </div>
+  )
+}
+
+/**
+ * Live2D 预览组件（选择页面专用）
+ */
+function Live2DPreview({ modelPath }) {
+  const [failed, setFailed] = useState(false)
+  const [ready, setReady] = useState(false)
+
+  // 加载 Live2D 预览
+  useState(() => {
+    if (typeof window.loadlive2d !== 'function') {
+      setFailed(true)
+      return
+    }
+
+    try {
+      window.loadlive2d('preview-live2d-canvas', modelPath, 0.5)
+      setTimeout(() => {
+        const canvas = document.getElementById('preview-live2d-canvas')
+        if (canvas && canvas.width > 0) {
+          setReady(true)
+        } else {
+          setFailed(true)
+        }
+      }, 3000)
+    } catch {
+      setFailed(true)
+    }
+  })
+
+  if (failed) {
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 200,
+        height: 280,
+        color: '#666',
+        fontSize: 14,
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 48, marginBottom: 8 }}>🎭</div>
+          <div>Live2D 预览</div>
+          <div style={{ fontSize: 12, color: '#888' }}>(进入系统后可看到完整动画)</div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ position: 'relative', width: 200, height: 280 }}>
+      <canvas
+        id="preview-live2d-canvas"
+        width={400}
+        height={560}
+        style={{
+          width: 200,
+          height: 280,
+          opacity: ready ? 1 : 0,
+          transition: 'opacity 0.5s ease',
+        }}
+      />
+      {!ready && (
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          color: '#06b6d4',
+          fontSize: 12,
+        }}>
+          加载中...
+        </div>
+      )}
     </div>
   )
 }

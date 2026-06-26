@@ -5,11 +5,21 @@
 import create from 'zustand'
 
 const MODEL_LIST = [
-  { id: 'cat-black', name: '黑猫咪', emoji: '🐱', color: '#1f1f1f' },
-  { id: 'cat-white', name: '白猫咪', emoji: '😺', color: '#f5f5f5' },
-  { id: 'cat-orange', name: '橘猫咪', emoji: '🐈', color: '#ff9b6b' },
-  { id: 'cat-gray', name: '灰猫咪', emoji: '😸', color: '#8b949e' },
-  { id: 'cat-pink', name: '粉猫咪', emoji: '😻', color: '#ff6b9d' },
+  // Live2D 模型（真实动画形象）
+  { id: 'shizuku', name: 'Shizuku', emoji: '👧', live2d: true, modelPath: '/live2d/models/shizuku/assets/shizuku.model.json', desc: '温柔少女，经典看板娘' },
+  { id: 'miku', name: 'Miku', emoji: '🎤', live2d: true, modelPath: '/live2d/models/miku/assets/miku.model.json', desc: '初音未来，元气满满' },
+  { id: 'haru', name: 'Haru', emoji: '🌸', live2d: true, modelPath: '/live2d/models/haru/01/assets/haru01.model.json', desc: '春日少女，活泼可爱' },
+  { id: 'haru-02', name: 'Haru (礼服)', emoji: '🎀', live2d: true, modelPath: '/live2d/models/haru/02/assets/haru02.model.json', desc: '春日少女，优雅礼服版' },
+  { id: 'koharu', name: 'Koharu', emoji: '☀️', live2d: true, modelPath: '/live2d/models/koharu/assets/koharu.model.json', desc: '阳光少女，温暖治愈' },
+  { id: 'izumi', name: 'Izumi', emoji: '🌊', live2d: true, modelPath: '/live2d/models/izumi/assets/izumi.model.json', desc: '知性学姐，温柔大方' },
+  { id: 'chitose', name: 'Chitose', emoji: '🍀', live2d: true, modelPath: '/live2d/models/chitose/assets/chitose.model.json', desc: '元气少女，清新自然' },
+  { id: 'wanko', name: 'Wanko', emoji: '🐶', live2d: true, modelPath: '/live2d/models/wanko/assets/wanko.model.json', desc: '可爱小狗娘，忠诚陪伴' },
+  { id: 'z16', name: 'Z16', emoji: '🤖', live2d: true, modelPath: '/live2d/models/z16/assets/z16.model.json', desc: '机械少女，科技感十足' },
+  { id: 'blanc', name: 'Blanc', emoji: '🤍', live2d: true, modelPath: '/live2d/models/blanc_normal/blanc_normal/blanc_normal.model.json', desc: '纯白少女，优雅冷静' },
+  { id: 'vert', name: 'Vert', emoji: '💚', live2d: true, modelPath: '/live2d/models/vert/vert_classic/vert_classic.model.json', desc: '绿荫女神，成熟魅力' },
+  { id: 'haruto', name: 'Haruto', emoji: '👦', live2d: true, modelPath: '/live2d/models/haruto/assets/haruto.model.json', desc: '阳光少年，帅气活力' },
+  { id: 'histoire', name: 'Histoire', emoji: '📖', live2d: true, modelPath: '/live2d/models/histoire/histoire/histoire.model.json', desc: '知识之书，智慧化身' },
+  { id: 'nepgear', name: 'Nepgear', emoji: '⚙️', live2d: true, modelPath: '/live2d/models/nepgear_extra/nepgear_extra/nepgear_extra.model.json', desc: '机甲少女，未来战士' },
 ]
 
 const MASCOT_KEY = 'mascot_model_id'
