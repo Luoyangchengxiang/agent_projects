@@ -15,6 +15,7 @@ export const authService = {
    */
   async login(email, password) {
     const res = await request.post('/auth/login', { email, password })
+    // 后端返回格式: { success: true, data: { user, token, is_local_login } }
     const { user, token, is_local_login } = res.data
 
     // 存储Token和用户信息
@@ -49,6 +50,7 @@ export const authService = {
    */
   async getCurrentUser() {
     const res = await request.get('/auth/me')
+    // 后端返回格式: { success: true, data: { user } }
     const user = res.data.user
 
     // 更新缓存

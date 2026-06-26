@@ -5,46 +5,59 @@ import {
   CheckCircleOutlined, 
   ExclamationCircleOutlined 
 } from '@ant-design/icons'
-
-// 模拟统计数据
-const mockStats = {
-  total: 156,
-  unresolved: 23,
-  resolved: 133,
-  by_severity: {
-    critical: 5,
-    high: 12,
-    medium: 45,
-    low: 67,
-    info: 27
-  }
-}
+import request from '../services/request'
 
 function ErrorStats() {
-  const [stats, setStats] = useState(mockStats)
+  const [stats, setStats] = useState({
+    total: 0,
+    unresolved: 0,
+    resolved: 0,
+    by_severity: {
+      critical: 0,
+      high: 0,
+      medium: 0,
+      low: 0,
+      info: 0
+    }
+  })
+
+  const fetchStats = async () => {
+    try {
+      const res = await request.get('/error-logs/stats')
+      if (res.success) {
+        setStats(res.data)
+      }
+    } catch (error) {
+      console.error('获取错误统计失败:', error)
+    }
+  }
+
+  useEffect(() => {
+    fetchStats()
+  }, [])
 
   const severityCards = [
     {
       title: '严重错误',
-      value: stats.by_severity.critical,
+      value: stats.by_severity?.critical || 0,
       icon: <ExclamationCircleOutlined className="text-2xl" />,
       color: 'text-error'
     },
     {
       title: '高级错误',
-      value: stats.by_severity.high,
+      value: stats.by_severity?.high || 0,
       icon: <WarningOutlined className="text-2xl" />,
       color: 'text-warning'
     },
     {
       title: '未解决',
-      value: stats.unresolved,
+      value: stats.unresolved || 0,
       icon: <BugOutlined className="text-2xl" />,
       color: 'text-primary'
     },
     {
       title: '已解决',
-      value: stats.resolved,
+      value: stats.resolved || 0,
       icon: <CheckCircleOutlined className="text-2xl" />,
       color: 'text-success'
     }

@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Table, Tag, Select, DatePicker, Space, message } from 'antd'
+import { Table, Tag, Select, DatePicker, Space, App } from 'antd'
 import { LoadingOutlined } from '@ant-design/icons'
 import { executionLogApi } from '@agent-monitor/api'
 
 function ExecutionLogs() {
+  const { message } = App.useApp()
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState(null)

@@ -1,5 +1,5 @@
 import { Routes, Route } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import MainLayout from './components/MainLayout'
 import ProtectedRoute from './components/ProtectedRoute'
 import Dashboard from './pages/Dashboard'
@@ -14,22 +14,15 @@ import useAuthStore from './stores/authStore'
 import useMascotStore from './stores/mascotStore'
 
 function App() {
-  const { init, isAuthenticated } = useAuthStore()
+  const { init, isInitialized } = useAuthStore()
   const { hasSelectedModel } = useMascotStore()
-  const [initializing, setInitializing] = useState(true)
 
   useEffect(() => {
-    const initApp = async () => {
-      console.log('[App] 开始初始化...')
-      await init()
-      console.log('[App] 初始化完成')
-      setInitializing(false)
-    }
-    initApp()
+    init()
   }, [init])
 
   // 显示加载状态
-  if (initializing) {
+  if (!isInitialized) {
     return (
       <div style={{
         display: 'flex',

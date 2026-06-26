@@ -1,10 +1,14 @@
 import axios from 'axios'
 import type { Agent, ExecutionLog, DashboardStats, ChartData, ApiResponse, PaginatedResponse, PaginationParams } from '@agent-monitor/types'
 
+// Token key，与主应用保持一致
+const TOKEN_KEY = 'auth_token'
+const USER_KEY = 'auth_user'
+
 // 创建axios实例
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
-  timeout: 10000,
+  baseURL: '/api',
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
@@ -14,10 +18,15 @@ const api = axios.create({
 // 请求拦截器
 api.interceptors.request.use(
   (config) => {
-    // 从localStorage获取token
-    const token = localStorage.getItem('token')
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
+    // 白名单路径不附加Token
+    const whiteList = ['/auth/login', '/auth/register']
+    const isWhiteListed = whiteList.some((path) => config.url?.includes(path))
+    
+    if (!isWhiteListed) {
+      const token = localStorage.getItem(TOKEN_KEY)
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`
+      }
     }
     return config
   },
@@ -34,12 +43,14 @@ api.interceptors.response.use(
   (error) => {
     // 处理错误
     if (error.response) {
-      // 服务器返回错误
       const { status, data } = error.response
       if (status === 401) {
-        // 未授权，清除token
-        localStorage.removeItem('token')
-        window.location.href = '/login'
+        // 未授权，清除token并跳转登录
+        localStorage.removeItem(TOKEN_KEY)
+        localStorage.removeItem(USER_KEY)
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login'
+        }
       }
       return Promise.reject(data || error.message)
     }

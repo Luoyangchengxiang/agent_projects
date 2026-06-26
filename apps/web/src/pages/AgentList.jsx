@@ -7,10 +7,11 @@ import {
   EyeOutlined,
   LoadingOutlined
 } from '@ant-design/icons'
-import { Table, Tag, Button, Input, Space, message } from 'antd'
+import { Table, Tag, Button, Input, Space, App } from 'antd'
 import { agentApi } from '@agent-monitor/api'
 
 function AgentList() {
+  const { message } = App.useApp()
   const [agents, setAgents] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchText, setSearchText] = useState('')

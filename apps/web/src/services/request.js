@@ -76,10 +76,13 @@ request.interceptors.response.use(
       return Promise.reject(new Error(message))
     }
 
-    // Token过期 → 清除认证信息
+    // Token过期 → 清除认证信息并跳转登录
     if (response && response.status === 401) {
       tokenManager.clearAll()
-      // 不自动跳转，让组件处理
+      // 跳转到登录页
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login'
+      }
       return Promise.reject(new Error('未授权，请先登录'))
     }
 

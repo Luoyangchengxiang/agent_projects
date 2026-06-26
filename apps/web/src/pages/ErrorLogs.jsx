@@ -8,75 +8,19 @@ import {
   Input, 
   message, 
   Modal,
-  Tooltip 
+  Tooltip,
+  Spin
 } from 'antd'
 import { 
   BugOutlined, 
   CheckCircleOutlined, 
   DeleteOutlined, 
   EyeOutlined,
-  SearchOutlined 
+  SearchOutlined,
+  ReloadOutlined
 } from '@ant-design/icons'
 import ErrorStats from '../components/ErrorStats'
-
-// 模拟数据
-const mockErrors = [
-  {
-    id: 1,
-    error_type: 'database_error',
-    message: 'Connection refused: SQLSTATE[HY000] [2002] Connection refused',
-    severity: 'critical',
-    url: '/api/agents',
-    method: 'GET',
-    ip: '127.0.0.1',
-    is_resolved: false,
-    created_at: '2026-06-24 10:30:00'
-  },
-  {
-    id: 2,
-    error_type: 'validation_error',
-    message: 'The name field is required.',
-    severity: 'low',
-    url: '/api/agents',
-    method: 'POST',
-    ip: '192.168.1.100',
-    is_resolved: true,
-    created_at: '2026-06-24 09:15:00'
-  },
-  {
-    id: 3,
-    error_type: 'not_found',
-    message: 'No query results for model [App\Models\Agent] 999',
-    severity: 'low',
-    url: '/api/agents/999',
-    method: 'GET',
-    ip: '192.168.1.101',
-    is_resolved: false,
-    created_at: '2026-06-24 08:45:00'
-  },
-  {
-    id: 4,
-    error_type: 'agent_error',
-    message: 'Agent execution timeout after 30 seconds',
-    severity: 'medium',
-    url: '/api/execution-logs',
-    method: 'POST',
-    ip: '127.0.0.1',
-    is_resolved: false,
-    created_at: '2026-06-23 22:30:00'
-  },
-  {
-    id: 5,
-    error_type: 'system_error',
-    message: 'Allowed memory size of 134217728 bytes exhausted',
-    severity: 'critical',
-    url: '/api/dashboard/charts',
-    method: 'GET',
-    ip: '127.0.0.1',
-    is_resolved: true,
-    created_at: '2026-06-23 18:20:00'
-  }
-]
+import request from '../services/request'
 
 // 错误类型中文映射
 const errorTypeLabels = {
@@ -109,7 +53,7 @@ const severityConfig = {
 }
 
 function ErrorLogs() {
-  const [errors, setErrors] = useState(mockErrors)
+  const [errors, setErrors] = useState([])
   const [loading, setLoading] = useState(false)
   const [typeFilter, setTypeFilter] = useState(null)
   const [severityFilter, setSeverityFilter] = useState(null)
@@ -117,6 +61,53 @@ function ErrorLogs() {
   const [selectedRowKeys, setSelectedRowKeys] = useState([])
   const [detailModalVisible, setDetailModalVisible] = useState(false)
   const [currentError, setCurrentError] = useState(null)
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 20,
+    total: 0
+  })
+
+  // 从API获取错误日志
+  const fetchErrors = async (page = 1, pageSize = 20) => {
+    setLoading(true)
+    try {
+      const params = {
+        page,
+        per_page: pageSize
+      }
+      if (typeFilter) params.error_type = typeFilter
+      if (severityFilter) params.severity = severityFilter
+      if (searchText) params.search = searchText
+
+      const res = await request.get('/error-logs', { params })
+      if (res.success) {
+        setErrors(res.data.data || [])
+        setPagination({
+          current: res.data.current_page,
+          pageSize: res.data.per_page,
+          total: res.data.total
+        })
+      }
+    } catch (error) {
+      console.error('获取错误日志失败:', error)
+      message.error('获取错误日志失败')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 初始加载和筛选变化时重新获取
+  useEffect(() => {
+    fetchErrors(1, pagination.pageSize)
+  }, [typeFilter, severityFilter])
+
+  // 搜索防抖
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchErrors(1, pagination.pageSize)
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [searchText])
 
   const columns = [
     {
@@ -214,30 +205,49 @@ function ErrorLogs() {
     setDetailModalVisible(true)
   }
 
-  const handleResolve = (id) => {
-    setErrors(errors.map(e => 
-      e.id === id ? { ...e, is_resolved: true } : e
-    ))
-    message.success('已标记为已解决')
+  const handleResolve = async (id) => {
+    try {
+      const res = await request.put(`/error-logs/${id}/resolve`)
+      if (res.success) {
+        message.success('已标记为已解决')
+        fetchErrors(pagination.current, pagination.pageSize)
+      }
+    } catch (error) {
+      message.error('操作失败')
+    }
   }
 
-  const handleDelete = (id) => {
-    setErrors(errors.filter(e => e.id !== id))
-    message.success('已删除')
+  const handleDelete = async (id) => {
+    try {
+      const res = await request.delete(`/error-logs/${id}`)
+      if (res.success) {
+        message.success('已删除')
+        fetchErrors(pagination.current, pagination.pageSize)
+      }
+    } catch (error) {
+      message.error('删除失败')
+    }
   }
 
-  const handleBatchDelete = () => {
-    setErrors(errors.filter(e => !selectedRowKeys.includes(e.id)))
-    setSelectedRowKeys([])
-    message.success('批量删除成功')
+  const handleBatchDelete = async () => {
+    if (selectedRowKeys.length === 0) return
+    try {
+      const res = await request.post('/error-logs/batch-destroy', {
+        ids: selectedRowKeys
+      })
+      if (res.success) {
+        message.success('批量删除成功')
+        setSelectedRowKeys([])
+        fetchErrors(pagination.current, pagination.pageSize)
+      }
+    } catch (error) {
+      message.error('批量删除失败')
+    }
   }
 
-  const filteredErrors = errors.filter(error => {
-    if (typeFilter && error.error_type !== typeFilter) return false
-    if (severityFilter && error.severity !== severityFilter) return false
-    if (searchText && !error.message.includes(searchText)) return false
-    return true
-  })
+  const handleTableChange = (pag) => {
+    fetchErrors(pag.current, pag.pageSize)
+  }
 
   return (
     <div>
@@ -247,15 +257,23 @@ function ErrorLogs() {
           <h1 className="text-2xl font-bold text-primary">错误日志</h1>
           <p className="text-secondary mt-1">监控和排查系统错误</p>
         </div>
-        {selectedRowKeys.length > 0 && (
+        <Space>
           <Button 
-            danger 
-            icon={<DeleteOutlined />}
-            onClick={handleBatchDelete}
+            icon={<ReloadOutlined />} 
+            onClick={() => fetchErrors(pagination.current, pagination.pageSize)}
           >
-            批量删除 ({selectedRowKeys.length})
+            刷新
           </Button>
-        )}
+          {selectedRowKeys.length > 0 && (
+            <Button 
+              danger 
+              icon={<DeleteOutlined />}
+              onClick={handleBatchDelete}
+            >
+              批量删除 ({selectedRowKeys.length})
+            </Button>
+          )}
+        </Space>
       </div>
 
       {/* 统计卡片 */}
@@ -277,6 +295,7 @@ function ErrorLogs() {
               placeholder="错误类型"
               allowClear
               style={{ width: 150 }}
+              value={typeFilter}
               onChange={(value) => setTypeFilter(value)}
               options={Object.entries(errorTypeLabels).map(([value, label]) => ({
                 value,
@@ -287,6 +306,7 @@ function ErrorLogs() {
               placeholder="严重程度"
               allowClear
               style={{ width: 120 }}
+              value={severityFilter}
               onChange={(value) => setSeverityFilter(value)}
               options={Object.entries(severityConfig).map(([value, config]) => ({
                 value,
@@ -301,7 +321,7 @@ function ErrorLogs() {
       <div className="card">
         <Table
           columns={columns}
-          dataSource={filteredErrors}
+          dataSource={errors}
           rowKey="id"
           loading={loading}
           rowSelection={{
@@ -309,10 +329,11 @@ function ErrorLogs() {
             onChange: setSelectedRowKeys
           }}
           pagination={{
-            pageSize: 20,
+            ...pagination,
             showSizeChanger: true,
             showTotal: (total) => `共 ${total} 条`
           }}
+          onChange={handleTableChange}
         />
       </div>
 
@@ -341,15 +362,15 @@ function ErrorLogs() {
               </div>
               <div>
                 <label className="text-muted text-sm">请求方法</label>
-                <p className="text-primary font-mono">{currentError.method}</p>
+                <p className="text-primary font-mono">{currentError.method || '-'}</p>
               </div>
               <div>
                 <label className="text-muted text-sm">请求路径</label>
-                <p className="text-primary font-mono">{currentError.url}</p>
+                <p className="text-primary font-mono">{currentError.url || '-'}</p>
               </div>
               <div>
                 <label className="text-muted text-sm">IP地址</label>
-                <p className="text-primary">{currentError.ip}</p>
+                <p className="text-primary">{currentError.ip || '-'}</p>
               </div>
               <div>
                 <label className="text-muted text-sm">发生时间</label>
@@ -360,15 +381,20 @@ function ErrorLogs() {
               <label className="text-muted text-sm">错误消息</label>
               <p className="text-error bg-error/10 p-3 rounded mt-1">{currentError.message}</p>
             </div>
-            <div>
-              <label className="text-muted text-sm">堆栈跟踪</label>
-              <pre className="text-xs text-muted bg-surface p-3 rounded mt-1 overflow-auto max-h-48">
-                {`#0 /var/www/app/Controllers/Api/AgentController.php(45): App\\Models\\Agent::find(999)
-#1 /var/www/app/Exceptions/Handler.php(78): App\\Exceptions\\Handler->logErrorToDatabase()
-#2 /var/www/vendor/laravel/framework/src/Illuminate/Foundation/Exceptions/Handler.php(234): App\\Exceptions\\Handler->report()
-...`}
-              </pre>
-            </div>
+            {currentError.stack_trace && (
+              <div>
+                <label className="text-muted text-sm">堆栈跟踪</label>
+                <pre className="text-xs text-muted bg-surface p-3 rounded mt-1 overflow-auto max-h-48">
+                  {currentError.stack_trace}
+                </pre>
+              </div>
+            )}
+            {currentError.resolution_notes && (
+              <div>
+                <label className="text-muted text-sm">解决方案</label>
+                <p className="text-success bg-success/10 p-3 rounded mt-1">{currentError.resolution_notes}</p>
+              </div>
+            )}
           </div>
         )}
       </Modal>
