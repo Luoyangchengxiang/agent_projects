@@ -18,6 +18,8 @@ class ExecutionLog extends Model
         'context',
         'duration',
         'error',
+        'created_at',
+        'updated_at',
     ];
 
     protected $casts = [

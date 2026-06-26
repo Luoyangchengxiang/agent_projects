@@ -109,7 +109,20 @@ function ExecutionLogs() {
       title: '执行时间',
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (text) => <span className="text-muted">{text}</span>
+      render: (text) => {
+        if (!text) return <span className="text-muted">-</span>
+        const date = new Date(text)
+        const formatted = date.toLocaleString('zh-CN', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        })
+        return <span className="text-muted">{formatted}</span>
+      }
     },
     {
       title: '结果',
@@ -208,7 +221,15 @@ function ExecutionLogs() {
             <div className="mb-4 p-3 bg-gray-800 rounded">
               <div className="flex justify-between text-sm text-gray-400">
                 <span>任务ID: {selectedLog.task_id}</span>
-                <span>执行时间: {selectedLog.created_at}</span>
+                <span>执行时间: {new Date(selectedLog.created_at).toLocaleString('zh-CN', {
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                  hour12: false
+                })}</span>
               </div>
               <div className="mt-2">
                 <Tag color={selectedLog.status === 'success' ? 'success' : 'error'}>
