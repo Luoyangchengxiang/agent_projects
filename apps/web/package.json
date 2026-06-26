@@ -18,6 +18,7 @@
     "@tanstack/react-query": "^5.0.0",
     "antd": "^5.0.0",
     "axios": "^1.0.0",
+    "dayjs": "^1.11.0",
     "echarts-for-react": "^3.0.0",
     "lucide-react": "^1.21.0",
     "preload-screen": "^1.2.1",

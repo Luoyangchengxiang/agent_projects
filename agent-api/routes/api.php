@@ -81,4 +81,18 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/users/{id}/role', [App\Http\Controllers\Api\PermissionController::class, 'updateRole']);
         Route::put('/users/{id}/permissions', [App\Http\Controllers\Api\PermissionController::class, 'updatePermissions']);
     });
+
+    // ==================== 报告系统 ====================
+    Route::prefix('reports')->group(function () {
+        Route::get('/', [App\Http\Controllers\ReportController::class, 'index']);
+        Route::get('/{report}', [App\Http\Controllers\ReportController::class, 'show']);
+        Route::get('/{report}/download', [App\Http\Controllers\ReportController::class, 'download']);
+        Route::delete('/{report}', [App\Http\Controllers\ReportController::class, 'destroy']);
+        
+        // 生成报告
+        Route::post('/generate/weekly', [App\Http\Controllers\ReportController::class, 'generateWeekly']);
+        Route::post('/generate/monthly', [App\Http\Controllers\ReportController::class, 'generateMonthly']);
+        Route::post('/generate/selection', [App\Http\Controllers\ReportController::class, 'generateSelection']);
+        Route::post('/generate/custom', [App\Http\Controllers\ReportController::class, 'generateCustom']);
+    });
 });

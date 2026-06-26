@@ -11,6 +11,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'))
 const AgentList = lazy(() => import('./pages/AgentList'))
 const ExecutionLogs = lazy(() => import('./pages/ExecutionLogs'))
 const ErrorLogs = lazy(() => import('./pages/ErrorLogs'))
+const Reports = lazy(() => import('./pages/Reports'))
 const ChatAdmin = lazy(() => import('./pages/ChatAdmin'))
 const Login = lazy(() => import('./pages/Login'))
 const Register = lazy(() => import('./pages/Register'))
@@ -116,6 +117,7 @@ function App({ onReady }) {
             <Route path="agents" element={<AgentList />} />
             <Route path="logs" element={<ExecutionLogs />} />
             <Route path="errors" element={<ErrorLogs />} />
+            <Route path="reports" element={<Reports />} />
             <Route path="chat" element={<ChatAdmin />} />
             <Route path="permissions" element={<PermissionManagement />} />
             <Route path="settings" element={<Settings />} />
