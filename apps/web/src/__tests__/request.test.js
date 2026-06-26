@@ -63,6 +63,6 @@ describe('request模块配置', () => {
   it('能导入request模块', async () => {
     const request = await import('../services/request')
     expect(request.default).toBeDefined()
-    expect(request.cancelAllRequests).toBeDefined()
+    // cancelAllRequests 已移除（简化request.js）
   })
 })

@@ -7,14 +7,12 @@ import create from 'zustand'
 import { authService } from '../services/authService'
 import { tokenManager } from '../services/tokenManager'
 
-// 标记是否正在初始化
-let initializing = false
-
 const useAuthStore = create((set, get) => ({
   // 状态
   user: tokenManager.getUser(),
   isAuthenticated: tokenManager.hasToken(),
   isLoading: false,
+  isInitialized: false, // 新增：标记是否已初始化
   error: null,
 
   // 登录
@@ -84,18 +82,25 @@ const useAuthStore = create((set, get) => ({
 
   // 初始化（应用启动时调用）
   init: async () => {
+    const { isInitialized, isAuthenticated } = get()
+    
     // 防止重复初始化
-    if (initializing) {
-      console.log('[AuthStore] 已经在初始化中，跳过')
+    if (isInitialized) {
+      console.log('[AuthStore] 已初始化，跳过')
       return
     }
     
     const hasToken = tokenManager.hasToken()
-    console.log('[AuthStore] 初始化, hasToken:', hasToken)
+    console.log('[AuthStore] 初始化, hasToken:', hasToken, 'isAuthenticated:', isAuthenticated)
+    
+    // 如果已经通过 login() 登录成功，跳过初始化
+    if (isAuthenticated) {
+      console.log('[AuthStore] 已登录，跳过初始化')
+      set({ isInitialized: true })
+      return
+    }
     
     if (hasToken) {
-      initializing = true
-      
       // 先从缓存获取用户信息
       const cachedUser = tokenManager.getUser()
       if (cachedUser) {
@@ -103,29 +108,36 @@ const useAuthStore = create((set, get) => ({
         set({ user: cachedUser, isAuthenticated: true })
       }
       
-      // 然后尝试刷新用户信息（不阻塞）
+      // 然后尝试刷新用户信息
       try {
         const user = await authService.getCurrentUser()
         console.log('[AuthStore] 刷新用户信息成功:', user)
         set({ user, isAuthenticated: true })
       } catch (error) {
-        // 忽略取消的请求
-        if (error.message === '请求已取消') {
-          console.log('[AuthStore] 请求被取消，忽略')
-        } else {
-          console.error('[AuthStore] 刷新用户信息失败:', error)
-          // 如果刷新失败，但有缓存，保持登录状态
-          if (!cachedUser) {
-            tokenManager.clearAll()
-            set({ user: null, isAuthenticated: false })
-          }
+        console.error('[AuthStore] 刷新用户信息失败:', error)
+        // 如果刷新失败，但有缓存，保持登录状态
+        if (!cachedUser) {
+          tokenManager.clearAll()
+          set({ user: null, isAuthenticated: false })
         }
-      } finally {
-        initializing = false
       }
     } else {
-      set({ user: null, isAuthenticated: false })
+      // 只有在确认没有 token 且未登录时才清除状态
+      // 再次检查，防止 login() 在 init() 执行期间设置了 token
+      const currentToken = tokenManager.hasToken()
+      if (!currentToken) {
+        set({ user: null, isAuthenticated: false })
+      } else {
+        // 如果 init 期间有了新 token，尝试获取用户信息
+        const cachedUser = tokenManager.getUser()
+        if (cachedUser) {
+          set({ user: cachedUser, isAuthenticated: true })
+        }
+      }
     }
+    
+    // 标记初始化完成
+    set({ isInitialized: true })
   },
 }))
 

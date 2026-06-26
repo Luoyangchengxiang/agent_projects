@@ -102,6 +102,53 @@ function createTestStore() {
     },
 
     clearError: () => set({ error: null }),
+
+    init: async () => {
+      const { isInitialized, isAuthenticated } = get()
+      
+      if (isInitialized) {
+        return
+      }
+      
+      const hasToken = tokenManager.hasToken()
+      
+      // 如果已经通过 login() 登录成功，跳过初始化
+      if (isAuthenticated) {
+        set({ isInitialized: true })
+        return
+      }
+      
+      if (hasToken) {
+        const cachedUser = tokenManager.getUser()
+        if (cachedUser) {
+          set({ user: cachedUser, isAuthenticated: true })
+        }
+        
+        try {
+          const user = await authService.getCurrentUser()
+          set({ user, isAuthenticated: true })
+        } catch (error) {
+          if (!cachedUser) {
+            tokenManager.clearAll()
+            set({ user: null, isAuthenticated: false })
+          }
+        }
+      } else {
+        // 再次检查，防止 login() 在 init() 执行期间设置了 token
+        const currentToken = tokenManager.hasToken()
+        if (!currentToken) {
+          set({ user: null, isAuthenticated: false })
+        } else {
+          // 如果 init 期间有了新 token，尝试获取用户信息
+          const cachedUser = tokenManager.getUser()
+          if (cachedUser) {
+            set({ user: cachedUser, isAuthenticated: true })
+          }
+        }
+      }
+      
+      set({ isInitialized: true })
+    },
   }))
 }
 
@@ -242,6 +289,69 @@ describe('authStore', () => {
       useAuthStore.setState({ error: 'some error' })
       useAuthStore.getState().clearError()
       expect(useAuthStore.getState().error).toBeNull()
+    })
+  })
+
+  describe('init (竞态条件防护)', () => {
+    it('已登录时跳过初始化', async () => {
+      // 模拟已经通过 login() 登录成功
+      useAuthStore.setState({ isAuthenticated: true, isInitialized: false })
+      
+      await useAuthStore.getState().init()
+      
+      // 应该跳过初始化，直接标记为已初始化
+      expect(useAuthStore.getState().isInitialized).toBe(true)
+      expect(useAuthStore.getState().isAuthenticated).toBe(true)
+      expect(authService.getCurrentUser).not.toHaveBeenCalled()
+    })
+
+    it('有token时尝试刷新用户信息', async () => {
+      const mockUser = { id: 1, name: '管理员', email: 'admin@local' }
+      tokenManager.hasToken.mockReturnValue(true)
+      tokenManager.getUser.mockReturnValue(mockUser)
+      authService.getCurrentUser.mockResolvedValue(mockUser)
+      
+      useAuthStore.setState({ isAuthenticated: false, isInitialized: false })
+      
+      await useAuthStore.getState().init()
+      
+      expect(useAuthStore.getState().isAuthenticated).toBe(true)
+      expect(useAuthStore.getState().user).toEqual(mockUser)
+      expect(useAuthStore.getState().isInitialized).toBe(true)
+    })
+
+    it('无token时设置未登录状态', async () => {
+      tokenManager.hasToken.mockReturnValue(false)
+      
+      useAuthStore.setState({ isAuthenticated: false, isInitialized: false })
+      
+      await useAuthStore.getState().init()
+      
+      expect(useAuthStore.getState().isAuthenticated).toBe(false)
+      expect(useAuthStore.getState().user).toBeNull()
+      expect(useAuthStore.getState().isInitialized).toBe(true)
+    })
+
+    it('init期间login()设置token后不清除状态', async () => {
+      const mockUser = { id: 1, name: '管理员', email: 'admin@local' }
+      
+      // 模拟 init() 开始时没有 token
+      tokenManager.hasToken.mockReturnValueOnce(false)
+      
+      // 但第二次检查时有 token（模拟 login() 在 init() 期间设置了 token）
+      tokenManager.hasToken.mockReturnValueOnce(true)
+      
+      // 模拟有缓存的用户信息
+      tokenManager.getUser.mockReturnValue(mockUser)
+      
+      useAuthStore.setState({ isAuthenticated: false, isInitialized: false })
+      
+      await useAuthStore.getState().init()
+      
+      // 应该保留登录状态，不被清除
+      expect(useAuthStore.getState().isAuthenticated).toBe(true)
+      expect(useAuthStore.getState().user).toEqual(mockUser)
+      expect(useAuthStore.getState().isInitialized).toBe(true)
     })
   })
 })
