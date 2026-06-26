@@ -55,8 +55,8 @@ const EDGE_TYPES = {
 const getNodeStatus = (node) => {
   // 这里模拟一些节点处于"运行中"状态
   // 实际项目中应该从 API 获取真实的运行状态
-  const runningAgents = [1, 2, 3] // 模拟运行中的 Agent ID
-  if (node.type === 'agent' && runningAgents.includes(node.id)) {
+  const runningAgentIds = [1, 2, 3] // 模拟运行中的 Agent ID
+  if (node.type === 'agent' && runningAgentIds.map(String).includes(String(node.id))) {
     return 'running'
   }
   return 'idle'
@@ -81,7 +81,7 @@ function KnowledgeGraph() {
   const chartRef = useRef(null)
   const containerRef = useRef(null)
   const refreshTimerRef = useRef(null)
-  const animationFrameRef = useRef(null)
+  const refreshFailCountRef = useRef(0) // 连续失败计数
 
   // 加载图谱数据
   const loadGraphData = useCallback(async (showLoading = true) => {
@@ -91,10 +91,18 @@ function KnowledgeGraph() {
       if (res.success) {
         setGraphData(res.data)
         setLastRefresh(new Date())
+        refreshFailCountRef.current = 0 // 重置失败计数
       }
     } catch (error) {
       console.error('加载图谱数据失败:', error)
-      if (showLoading) message.error('加载失败')
+      refreshFailCountRef.current += 1
+      if (showLoading) {
+        message.error('加载失败')
+      } else if (refreshFailCountRef.current >= 3) {
+        // 连续失败3次后通知用户
+        message.warning('数据刷新多次失败，请检查网络连接')
+        refreshFailCountRef.current = 0 // 重置避免重复通知
+      }
     } finally {
       if (showLoading) setLoading(false)
     }
