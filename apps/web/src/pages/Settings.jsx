@@ -6,7 +6,7 @@ import { useState } from 'react'
 import {
   UserOutlined, LockOutlined, SmileOutlined,
   InfoCircleOutlined, CrownOutlined, SaveOutlined,
-  EyeInvisibleOutlined, EyeTwoOutlined
+  EyeInvisibleOutlined, EyeOutlined
 } from '@ant-design/icons'
 import { Card, Form, Input, Button, App, Tag, Divider, Descriptions, Switch } from 'antd'
 import useAuthStore from '../stores/authStore'

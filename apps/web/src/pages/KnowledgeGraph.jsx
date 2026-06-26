@@ -29,37 +29,21 @@ import {
   PlayCircleOutlined,
 } from '@ant-design/icons'
 import { graphApi } from '../services/graphApi'
+import G6Graph from '../components/G6Graph'
+import { NODE_TYPES, EDGE_TYPES, getNodeStatus } from '../constants/graphConstants'
 
 const { Search } = Input
 const { Option } = Select
 
-// 节点类型配置
-const NODE_TYPES = {
-  agent_group: { label: '智能体组', color: '#6366f1', icon: '🤖' },
-  agent: { label: '智能体', color: '#06b6d4', icon: '⚡' },
-  knowledge: { label: '知识库', color: '#8b5cf6', icon: '📚' },
-  skill: { label: '技能', color: '#f59e0b', icon: '🎯' },
-  output: { label: '产出物', color: '#10b981', icon: '📊' },
-}
-
-// 关系类型配置
-const EDGE_TYPES = {
-  contains: { label: '包含', color: '#6366f1' },
-  uses: { label: '使用', color: '#06b6d4' },
-  produces: { label: '产出', color: '#10b981' },
-  depends_on: { label: '依赖', color: '#f59e0b' },
-  collaborates: { label: '协作', color: '#ec4899' },
-}
-
-// 模拟节点运行状态（实际项目中应从后端获取）
-const getNodeStatus = (node) => {
-  // 这里模拟一些节点处于"运行中"状态
-  // 实际项目中应该从 API 获取真实的运行状态
-  const runningAgentIds = [1, 2, 3] // 模拟运行中的 Agent ID
-  if (node.type === 'agent' && runningAgentIds.map(String).includes(String(node.id))) {
-    return 'running'
-  }
-  return 'idle'
+// HTML 转义，防止 XSS
+const escapeHtml = (str) => {
+  if (!str) return ''
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
 }
 
 function KnowledgeGraph() {
@@ -70,11 +54,13 @@ function KnowledgeGraph() {
   const [drawerVisible, setDrawerVisible] = useState(false)
   const [filterType, setFilterType] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [highlightNodeIds, setHighlightNodeIds] = useState([])
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [addNodeVisible, setAddNodeVisible] = useState(false)
   const [addEdgeVisible, setAddEdgeVisible] = useState(false)
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [refreshInterval, setRefreshInterval] = useState(10) // 秒
+  const [rendererType, setRendererType] = useState('echarts') // echarts | g6
   const [lastRefresh, setLastRefresh] = useState(null)
   const [form] = Form.useForm()
   const [edgeForm] = Form.useForm()
@@ -143,6 +129,7 @@ function KnowledgeGraph() {
   const handleSearch = async (value) => {
     if (!value.trim()) {
       setSearchResults([])
+      setHighlightNodeIds([])
       highlightNodes([])
       return
     }
@@ -151,7 +138,9 @@ function KnowledgeGraph() {
       const res = await graphApi.search(value)
       if (res.success) {
         setSearchResults(res.data)
-        highlightNodes(res.data.map(n => n.id))
+        const ids = res.data.map(n => n.id)
+        setHighlightNodeIds(ids)
+        highlightNodes(ids)
       }
     } catch (error) {
       console.error('搜索失败:', error)
@@ -270,24 +259,28 @@ function KnowledgeGraph() {
             const typeConfig = NODE_TYPES[params.data.type] || NODE_TYPES.agent
             const status = params.data.status
             const statusText = status === 'running' ? '<span style="color: #10b981;">● 运行中</span>' : '<span style="color: #9ca3af;">○ 空闲</span>'
+            const safeName = escapeHtml(params.name)
+            const safeLabel = escapeHtml(typeConfig.label)
+            const safeIcon = escapeHtml(typeConfig.icon)
+            const safeDesc = params.data.description ? `<div style="color: #9ca3af; max-width: 200px; word-break: break-all;">描述: ${escapeHtml(params.data.description)}</div>` : ''
             
             return `
               <div style="padding: 4px 0;">
                 <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px;">
-                  ${typeConfig.icon} ${params.name}
+                  ${safeIcon} ${safeName}
                 </div>
                 <div style="color: #9ca3af; margin-bottom: 4px;">
-                  类型: ${typeConfig.label}
+                  类型: ${safeLabel}
                 </div>
                 <div style="margin-bottom: 4px;">
                   状态: ${statusText}
                 </div>
-                ${params.data.description ? `<div style="color: #9ca3af; max-width: 200px; word-break: break-all;">描述: ${params.data.description}</div>` : ''}
+                ${safeDesc}
               </div>
             `
           }
           if (params.dataType === 'edge') {
-            return `${params.data.label?.formatter || '关联'}`
+            return escapeHtml(params.data.label?.formatter || '关联')
           }
           return ''
         },
@@ -434,6 +427,7 @@ function KnowledgeGraph() {
   const resetSearch = () => {
     setSearchQuery('')
     setSearchResults([])
+    setHighlightNodeIds([])
     highlightNodes([])
   }
 
@@ -442,6 +436,19 @@ function KnowledgeGraph() {
     if (seconds < 60) return `${seconds}秒`
     return `${Math.floor(seconds / 60)}分${seconds % 60 > 0 ? seconds % 60 + '秒' : ''}`
   }
+
+  // G6 节点点击回调（用 useCallback 保持引用稳定，避免重建图实例）
+  const handleG6NodeClick = useCallback(async (nodeId) => {
+    try {
+      const res = await graphApi.getNode(nodeId)
+      if (res.success) {
+        setSelectedNode(res.data)
+        setDrawerVisible(true)
+      }
+    } catch (error) {
+      console.error('获取节点详情失败:', error)
+    }
+  }, [])
 
   return (
     <div 
@@ -545,6 +552,16 @@ function KnowledgeGraph() {
             刷新
           </Button>
 
+          {/* 渲染引擎切换 */}
+          <Select
+            value={rendererType}
+            onChange={setRendererType}
+            style={{ width: 140 }}
+          >
+            <Option value="echarts">📊 ECharts</Option>
+            <Option value="g6">🕸️ G6 图引擎</Option>
+          </Select>
+
           {/* 刷新间隔设置 */}
           <Select
             value={refreshInterval}
@@ -576,10 +593,15 @@ function KnowledgeGraph() {
                 color={NODE_TYPES[node.type]?.color}
                 style={{ cursor: 'pointer', marginBottom: 4 }}
                 onClick={async () => {
-                  const res = await graphApi.getNode(node.id)
-                  if (res.success) {
-                    setSelectedNode(res.data)
-                    setDrawerVisible(true)
+                  try {
+                    const res = await graphApi.getNode(node.id)
+                    if (res.success) {
+                      setSelectedNode(res.data)
+                      setDrawerVisible(true)
+                    }
+                  } catch (error) {
+                    console.error('获取节点详情失败:', error)
+                    message.error('获取节点详情失败')
                   }
                 }}
               >
@@ -603,17 +625,25 @@ function KnowledgeGraph() {
             <Spin size="large" tip="加载中..." />
           </div>
         ) : graphData.nodes && graphData.nodes.length > 0 ? (
-          <ReactECharts
-            ref={chartRef}
-            option={getChartOption()}
-            style={{ height: '100%', width: '100%' }}
-            onEvents={{
-              click: handleChartClick,
-            }}
-            opts={{ renderer: 'canvas' }}
-            notMerge={false}
-            lazyUpdate={true}
-          />
+          rendererType === 'g6' ? (
+            <G6Graph
+              graphData={graphData}
+              highlightNodeIds={highlightNodeIds}
+              onNodeClick={handleG6NodeClick}
+            />
+          ) : (
+            <ReactECharts
+              ref={chartRef}
+              option={getChartOption()}
+              style={{ height: '100%', width: '100%' }}
+              onEvents={{
+                click: handleChartClick,
+              }}
+              opts={{ renderer: 'canvas' }}
+              notMerge={false}
+              lazyUpdate={true}
+            />
+          )
         ) : (
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
             <Empty

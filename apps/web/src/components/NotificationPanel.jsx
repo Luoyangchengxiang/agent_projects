@@ -87,7 +87,7 @@ export default function NotificationPanel({ open, onClose, onUnreadChange }) {
       const [executionsRes, errorsRes, updatesRes] = await Promise.all([
         executionLogApi.getList({ page: 1, per_page: 10 }).catch(() => ({ data: { data: [] } })),
         errorLogApi.getList({ page: 1, per_page: 10, status: 'open' }).catch(() => ({ data: { data: [] } })),
-        versionUpdateApi.getLatest().catch(() => ({ data: { data: [] } }))
+        versionUpdateApi.getLatest().catch(() => ({ data: [] }))
       ])
 
       setNotifications({
@@ -96,7 +96,7 @@ export default function NotificationPanel({ open, onClose, onUnreadChange }) {
         messages: [
           { id: 1, content: '欢迎使用 Agent 监控系统！', time: '2026-06-26 10:00' },
         ],
-        updates: (updatesRes.data?.data || []).map(item => ({
+        updates: (updatesRes.data || []).map(item => ({
           id: item.id,
           version: item.version,
           content: item.title,
