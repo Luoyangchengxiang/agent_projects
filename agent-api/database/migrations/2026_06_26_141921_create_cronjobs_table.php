@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('cronjobs', function (Blueprint $table) {
+        Schema::create('cron_jobs', function (Blueprint $table) {
             $table->id();
             $table->string('name');                          // 任务名称
             $table->text('prompt')->nullable();              // 任务提示词
@@ -28,10 +28,10 @@ return new class extends Migration
             $table->index('next_run_at');
         });
 
-        Schema::create('cronjob_logs', function (Blueprint $table) {
+        Schema::create('cron_job_logs', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('cronjob_id');
-            $table->foreign('cronjob_id')->references('id')->on('cronjobs')->onDelete('cascade');
+            $table->foreign('cronjob_id')->references('id')->on('cron_jobs')->onDelete('cascade');
             $table->string('status', 20);                   // success/failed/timeout
             $table->text('output')->nullable();              // 执行输出
             $table->text('error')->nullable();               // 错误信息
@@ -44,7 +44,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('cronjob_logs');
-        Schema::dropIfExists('cronjobs');
+        Schema::dropIfExists('cron_job_logs');
+        Schema::dropIfExists('cron_jobs');
     }
 };
