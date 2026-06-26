@@ -16,14 +16,44 @@
   filter: drop-shadow(0 8px 20px rgba(255, 105, 180, 0.6));
 }
 
+/* 互动模式样式 */
+.mascot-container.mascot-interact {
+  filter: drop-shadow(0 4px 16px rgba(255, 107, 157, 0.5));
+}
+
+.mascot-container.mascot-interact:hover {
+  filter: drop-shadow(0 6px 20px rgba(255, 107, 157, 0.7));
+}
+
 .mascot-character {
-  cursor: grab;
   position: relative;
   transition: transform 0.3s ease;
 }
 
 .mascot-character--hover {
   transform: translateY(-3px);
+}
+
+/* 互动模式徽章 */
+.mascot-interact-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255, 107, 157, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  animation: interactBadgePulse 1.5s ease-in-out infinite;
+  z-index: 1;
+}
+
+@keyframes interactBadgePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
 }
 
 /* Hover 提示 */
@@ -99,13 +129,17 @@
 }
 
 /* 静态看板娘动画 */
-.mascot-static {
+.mascot-live2d-wrapper {
   animation: mascotFloat 3s ease-in-out infinite;
   transition: transform 0.3s ease;
 }
 
-.mascot-static:hover {
+.mascot-live2d-wrapper:hover {
   transform: scale(1.05);
+}
+
+.mascot-live2d-wrapper canvas {
+  border-radius: 8px;
 }
 
 .mascot-static svg.cat-avatar {
@@ -120,9 +154,4 @@
 @keyframes pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.5; transform: scale(1.2); }
-}
-
-/* 环状菜单样式覆盖 */
-.radial-menu {
-  z-index: 10001;
 }

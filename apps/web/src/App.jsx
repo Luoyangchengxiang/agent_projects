@@ -111,7 +111,7 @@ function App({ onReady }) {
 
   return (
     <ErrorBoundary>
-      <Suspense fallback={<PageLoading />}>
+      <Suspense fallback={null}>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />

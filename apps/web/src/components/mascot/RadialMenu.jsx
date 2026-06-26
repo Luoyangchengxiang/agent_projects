@@ -1,8 +1,10 @@
 /**
- * 环状交互菜单组件
- * 围绕看板娘展开，自动检测边界保持可视
+ * 环状交互菜单组件（独立模块）
+ * 通过 Portal 挂载到 body，使用 store 的 menuPosition 定位
+ * 与看板娘类型完全解耦
  */
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import {
   MessageOutlined,
   DashboardOutlined,
@@ -22,19 +24,34 @@ const MENU_ITEMS = [
 ]
 
 export default function RadialMenu({ onItemClick }) {
-  const { isMenuOpen, menuPosition, closeMenu } = useMascotStore()
+  const { isMenuOpen, menuPosition, closeMenu, interactMode } = useMascotStore()
   const menuRef = useRef(null)
+  const cleanupRef = useRef(null)
 
-  // 点击外部关闭
+  // 点击外部关闭（延迟注册，避免和打开菜单的同一次点击冲突）
   useEffect(() => {
+    // 清理上一次的监听器
+    cleanupRef.current?.()
+    cleanupRef.current = null
+
     if (!isMenuOpen) return
-    const handleClick = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
-        closeMenu()
+
+    // 延迟一个事件循环注册，确保不会捕获到触发菜单打开的那次 click
+    const timer = setTimeout(() => {
+      const handleClick = (e) => {
+        if (menuRef.current && !menuRef.current.contains(e.target)) {
+          closeMenu()
+        }
       }
+      document.addEventListener('click', handleClick)
+      cleanupRef.current = () => document.removeEventListener('click', handleClick)
+    }, 10)
+
+    return () => {
+      clearTimeout(timer)
+      cleanupRef.current?.()
+      cleanupRef.current = null
     }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
   }, [isMenuOpen, closeMenu])
 
   // ESC 关闭
@@ -51,7 +68,7 @@ export default function RadialMenu({ onItemClick }) {
 
   const radius = 100 // 菜单半径
 
-  return (
+  const menuContent = (
     <div
       ref={menuRef}
       className="radial-menu"
@@ -69,16 +86,22 @@ export default function RadialMenu({ onItemClick }) {
         const x = Math.cos(rad) * radius
         const y = Math.sin(rad) * radius
 
+        // 互动按钮根据模式显示不同状态
+        const isActive = item.id === 'interact' && interactMode
+
         return (
           <button
             key={item.id}
-            className="radial-menu-item"
+            className={`radial-menu-item ${isActive ? 'radial-menu-item--active' : ''}`}
             style={{
               transform: `translate(${x}px, ${y}px)`,
               '--item-color': item.color,
               animationDelay: `${index * 0.05}s`,
             }}
-            onClick={() => onItemClick?.(item.id)}
+            onClick={(e) => {
+              e.stopPropagation()
+              onItemClick?.(item.id)
+            }}
             title={item.label}
           >
             <span className="radial-menu-item-icon">{item.icon}</span>
@@ -88,4 +111,7 @@ export default function RadialMenu({ onItemClick }) {
       })}
     </div>
   )
+
+  // 通过 Portal 挂载到 body，完全脱离看板娘容器
+  return createPortal(menuContent, document.body)
 }

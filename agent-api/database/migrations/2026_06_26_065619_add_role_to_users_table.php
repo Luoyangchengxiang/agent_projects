@@ -12,8 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->enum('role', ['user', 'vip', 'admin'])->default('user')->after('email');
-            $table->json('permissions')->nullable()->after('role');
+            // role column already exists from 2026_06_25_000001 migration, only add permissions
+            if (!Schema::hasColumn('users', 'permissions')) {
+                $table->json('permissions')->nullable()->after('role');
+            }
         });
     }
 
@@ -23,7 +25,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn(['role', 'permissions']);
+            $table->dropColumn(['permissions']);
         });
     }
 };

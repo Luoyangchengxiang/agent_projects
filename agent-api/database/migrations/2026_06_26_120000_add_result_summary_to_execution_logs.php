@@ -12,9 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('execution_logs', function (Blueprint $table) {
-            $table->text('result_summary')->nullable()->after('output')->comment('执行结果汇总');
-            $table->string('agent_group')->nullable()->after('agent_id')->comment('智能体组');
-            $table->index(['agent_group', 'created_at']);
+            if (!Schema::hasColumn('execution_logs', 'result_summary')) {
+                $table->text('result_summary')->nullable()->after('output')->comment('执行结果汇总');
+            }
+            if (!Schema::hasColumn('execution_logs', 'agent_group')) {
+                $table->string('agent_group')->nullable()->after('agent_id')->comment('智能体组');
+                $table->index(['agent_group', 'created_at']);
+            }
         });
     }
 

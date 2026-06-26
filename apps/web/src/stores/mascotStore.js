@@ -22,6 +22,10 @@ const useMascotStore = create((set, get) => ({
   isChatOpen: false,
   isHovering: false,
   isLoading: false,
+  // 互动模式：默认 false，点击菜单"互动"后激活
+  interactMode: false,
+  // 设置面板
+  isSettingsOpen: false,
 
   // 模型列表
   models: MODEL_LIST,
@@ -57,6 +61,13 @@ const useMascotStore = create((set, get) => ({
   // 加载控制
   setLoading: (v) => set({ isLoading: v }),
 
+  // 互动模式切换
+  toggleInteractMode: () => set((state) => ({ interactMode: !state.interactMode })),
+
+  // 设置面板
+  openSettings: () => set({ isSettingsOpen: true }),
+  closeSettings: () => set({ isSettingsOpen: false }),
+
   // 重置（退出登录时）
   reset: () => {
     localStorage.removeItem(MASCOT_KEY)
@@ -66,6 +77,8 @@ const useMascotStore = create((set, get) => ({
       isChatOpen: false,
       isHovering: false,
       isLoading: false,
+      interactMode: false,
+      isSettingsOpen: false,
     })
   },
 }))
