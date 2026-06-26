@@ -10,12 +10,13 @@ function Header() {
   const { message } = App.useApp()
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
-  const { reset: resetMascot, hasSelectedModel } = useMascotStore()
+  const { reset: resetMascot } = useMascotStore()
   const [notificationOpen, setNotificationOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
 
   const isAdmin = user?.role === 'admin'
-  const mascotSelected = hasSelectedModel()
+  // 用后端数据库的 mascot_model_id 判断，不能用 localStorage（可被前端篡改）
+  const mascotSelected = !!user?.mascot_model_id
 
   // 接收 NotificationPanel 的未读数更新
   const handleUnreadChange = useCallback((total) => {

@@ -6,15 +6,19 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CheckOutlined, LockOutlined, ArrowRightOutlined, ArrowLeftOutlined } from '@ant-design/icons'
+import useAuthStore from '../stores/authStore'
 import useMascotStore from '../stores/mascotStore'
 import CatAvatar from '../components/mascot/CatAvatar'
 import './mascot-select.css'
 
 export default function MascotSelect() {
-  const { models, selectModel, hasSelectedModel } = useMascotStore()
+  const { models, selectModel } = useMascotStore()
+  const { user } = useAuthStore()
   const [selected, setSelected] = useState(null)
   const [confirmed, setConfirmed] = useState(false)
   const navigate = useNavigate()
+  // 用后端数据库的 mascot_model_id 判断（不可被前端篡改）
+  const hasExistingMascot = !!user?.mascot_model_id
 
   const selectedModel = models.find(m => m.id === selected)
 
@@ -32,8 +36,8 @@ export default function MascotSelect() {
   return (
     <div className="mascot-select">
       <div className="mascot-select-container">
-        {/* 返回按钮 — 已有看板娘时显示 */}
-        {hasSelectedModel() && (
+        {/* 返回按钮 — 后端已有看板娘记录时显示（首次选择不显示） */}
+        {hasExistingMascot && (
           <button
             onClick={() => navigate('/', { replace: true })}
             style={{
