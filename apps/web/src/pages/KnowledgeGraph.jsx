@@ -12,12 +12,10 @@ import {
   Empty,
   Spin,
   message,
-  Tooltip,
   Modal,
   Form,
 } from 'antd'
 import {
-  SearchOutlined,
   PlusOutlined,
   ExpandOutlined,
   CompressOutlined,
@@ -62,6 +60,7 @@ function KnowledgeGraph() {
   const [form] = Form.useForm()
   const [edgeForm] = Form.useForm()
   const chartRef = useRef(null)
+  const containerRef = useRef(null)
 
   // 加载图谱数据
   const loadGraphData = useCallback(async () => {
@@ -83,10 +82,22 @@ function KnowledgeGraph() {
     loadGraphData()
   }, [loadGraphData])
 
+  // 监听全屏状态变化
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement)
+    }
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange)
+    }
+  }, [])
+
   // 搜索节点
   const handleSearch = async (value) => {
     if (!value.trim()) {
       setSearchResults([])
+      highlightNodes([])
       return
     }
 
@@ -94,7 +105,6 @@ function KnowledgeGraph() {
       const res = await graphApi.search(value)
       if (res.success) {
         setSearchResults(res.data)
-        // 高亮搜索结果
         highlightNodes(res.data.map(n => n.id))
       }
     } catch (error) {
@@ -109,7 +119,6 @@ function KnowledgeGraph() {
     const chart = chartRef.current.getEchartsInstance()
     if (!chart) return
 
-    // 更新节点样式
     const option = chart.getOption()
     if (option.series && option.series[0]) {
       const updatedNodes = option.series[0].data.map(node => ({
@@ -138,7 +147,6 @@ function KnowledgeGraph() {
       return {}
     }
 
-    // 转换节点数据
     const chartNodes = nodes.map(node => {
       const typeConfig = NODE_TYPES[node.type] || NODE_TYPES.agent
       return {
@@ -164,12 +172,10 @@ function KnowledgeGraph() {
             return name.length > 8 ? name.substring(0, 8) + '...' : name
           },
         },
-        // 保存原始数据
         ...node,
       }
     })
 
-    // 转换边数据
     const chartEdges = edges.map(edge => {
       const edgeConfig = EDGE_TYPES[edge.relation_type] || EDGE_TYPES.contains
       return {
@@ -190,7 +196,6 @@ function KnowledgeGraph() {
       }
     })
 
-    // 类别配置
     const categories = Object.entries(NODE_TYPES).map(([key, config]) => ({
       name: config.label,
       itemStyle: {
@@ -207,6 +212,9 @@ function KnowledgeGraph() {
         textStyle: {
           color: '#e0e0e0',
         },
+        // 关键：设置 tooltip 的 z-index 低于 Modal 和 Drawer
+        z: 1000,
+        extraCssText: 'z-index: 1000;',
         formatter: (params) => {
           if (params.dataType === 'node') {
             const typeConfig = NODE_TYPES[params.data.type] || NODE_TYPES.agent
@@ -223,7 +231,6 @@ function KnowledgeGraph() {
             `
           }
           if (params.dataType === 'edge') {
-            const edgeConfig = EDGE_TYPES[params.data.lineStyle?.color] || EDGE_TYPES.contains
             return `${params.data.label?.formatter || '关联'}`
           }
           return ''
@@ -337,6 +344,7 @@ function KnowledgeGraph() {
       content: '删除节点将同时删除所有相关的关系',
       okText: '确定',
       cancelText: '取消',
+      zIndex: 1100,
       onOk: async () => {
         try {
           await graphApi.deleteNode(id)
@@ -350,9 +358,20 @@ function KnowledgeGraph() {
     })
   }
 
-  // 全屏切换
-  const toggleFullscreen = () => {
-    setIsFullscreen(!isFullscreen)
+  // 全屏切换 - 使用浏览器 Fullscreen API
+  const toggleFullscreen = async () => {
+    if (!containerRef.current) return
+
+    try {
+      if (!document.fullscreenElement) {
+        await containerRef.current.requestFullscreen()
+      } else {
+        await document.exitFullscreen()
+      }
+    } catch (error) {
+      console.error('全屏切换失败:', error)
+      message.error('全屏功能不可用')
+    }
   }
 
   // 重置搜索
@@ -363,9 +382,18 @@ function KnowledgeGraph() {
   }
 
   return (
-    <div>
+    <div 
+      ref={containerRef}
+      style={{ 
+        height: '100%', 
+        display: 'flex', 
+        flexDirection: 'column',
+        background: isFullscreen ? '#0f1117' : 'transparent',
+        padding: isFullscreen ? 24 : 0,
+      }}
+    >
       {/* 标题栏 */}
-      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
         <h4 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
           <ApartmentOutlined style={{ marginRight: 8 }} />
           知识图谱
@@ -393,14 +421,14 @@ function KnowledgeGraph() {
       </div>
 
       {/* 工具栏 */}
-      <Card style={{ marginBottom: 16 }}>
-        <Space size="large" style={{ width: '100%' }}>
+      <Card style={{ marginBottom: 16, flexShrink: 0 }} bodyStyle={{ padding: '12px 16px' }}>
+        <Space size="middle" style={{ width: '100%', flexWrap: 'wrap' }}>
           <Search
             placeholder="搜索节点..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onSearch={handleSearch}
-            style={{ width: 300 }}
+            style={{ width: 280 }}
             allowClear
           />
           
@@ -456,10 +484,10 @@ function KnowledgeGraph() {
       {/* 图谱主体 */}
       <Card
         style={{
-          height: isFullscreen ? 'calc(100vh - 180px)' : 600,
-          transition: 'height 0.3s',
+          flex: 1,
+          minHeight: 500,
         }}
-        bodyStyle={{ padding: 0 }}
+        bodyStyle={{ padding: 0, height: '100%' }}
       >
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
@@ -486,9 +514,9 @@ function KnowledgeGraph() {
       </Card>
 
       {/* 图例说明 */}
-      <Card style={{ marginTop: 16 }}>
-        <Space size="large">
-          <span style={{ color: '#9ca3af' }}>图例：</span>
+      <Card style={{ marginTop: 16, flexShrink: 0 }} bodyStyle={{ padding: '8px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+          <span style={{ color: '#9ca3af' }}>节点：</span>
           {Object.entries(NODE_TYPES).map(([key, config]) => (
             <Space key={key} size={4}>
               <div style={{
@@ -500,7 +528,7 @@ function KnowledgeGraph() {
               <span style={{ color: '#e0e0e0', fontSize: 12 }}>{config.label}</span>
             </Space>
           ))}
-          <span style={{ color: '#9ca3af', marginLeft: 16 }}>关系：</span>
+          <span style={{ color: '#9ca3af', marginLeft: 8 }}>关系：</span>
           {Object.entries(EDGE_TYPES).map(([key, config]) => (
             <Space key={key} size={4}>
               <div style={{
@@ -511,7 +539,7 @@ function KnowledgeGraph() {
               <span style={{ color: '#e0e0e0', fontSize: 12 }}>{config.label}</span>
             </Space>
           ))}
-        </Space>
+        </div>
       </Card>
 
       {/* 节点详情抽屉 */}
@@ -519,7 +547,7 @@ function KnowledgeGraph() {
         title={
           <Space>
             {selectedNode && NODE_TYPES[selectedNode.type]?.icon}
-            {selectedNode?.name}
+            <span>{selectedNode?.name}</span>
           </Space>
         }
         placement="right"
@@ -528,67 +556,84 @@ function KnowledgeGraph() {
           setSelectedNode(null)
         }}
         open={drawerVisible}
-        width={400}
+        width={420}
+        zIndex={1050}
       >
         {selectedNode && (
-          <div>
-            <Descriptions column={1} bordered size="small">
-              <Descriptions.Item label="类型">
-                <Tag color={NODE_TYPES[selectedNode.type]?.color}>
-                  {NODE_TYPES[selectedNode.type]?.label}
-                </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="名称">{selectedNode.name}</Descriptions.Item>
-              {selectedNode.description && (
-                <Descriptions.Item label="描述">{selectedNode.description}</Descriptions.Item>
-              )}
-              {selectedNode.agent && (
-                <Descriptions.Item label="关联Agent">{selectedNode.agent.name}</Descriptions.Item>
-              )}
-              <Descriptions.Item label="创建时间">
-                {new Date(selectedNode.created_at).toLocaleString('zh-CN')}
-              </Descriptions.Item>
-            </Descriptions>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {/* 基本信息 */}
+            <div>
+              <h5 style={{ marginBottom: 12, color: '#e0e0e0', fontSize: 14, fontWeight: 600 }}>基本信息</h5>
+              <Descriptions column={1} bordered size="small">
+                <Descriptions.Item label="类型">
+                  <Tag color={NODE_TYPES[selectedNode.type]?.color}>
+                    {NODE_TYPES[selectedNode.type]?.label}
+                  </Tag>
+                </Descriptions.Item>
+                <Descriptions.Item label="名称">{selectedNode.name}</Descriptions.Item>
+                {selectedNode.description && (
+                  <Descriptions.Item label="描述">{selectedNode.description}</Descriptions.Item>
+                )}
+                {selectedNode.agent && (
+                  <Descriptions.Item label="关联Agent">{selectedNode.agent.name}</Descriptions.Item>
+                )}
+                <Descriptions.Item label="创建时间">
+                  {new Date(selectedNode.created_at).toLocaleString('zh-CN')}
+                </Descriptions.Item>
+              </Descriptions>
+            </div>
 
             {/* 关联节点 */}
-            <div style={{ marginTop: 16 }}>
-              <h4>关联节点</h4>
-              {selectedNode.outgoing_edges?.length > 0 && (
-                <div style={{ marginBottom: 8 }}>
-                  <span style={{ color: '#9ca3af' }}>出边：</span>
-                  {selectedNode.outgoing_edges.map(edge => (
-                    <Tag key={edge.id} color={EDGE_TYPES[edge.relation_type]?.color}>
-                      → {edge.target?.name}
-                    </Tag>
-                  ))}
-                </div>
-              )}
-              {selectedNode.incoming_edges?.length > 0 && (
-                <div>
-                  <span style={{ color: '#9ca3af' }}>入边：</span>
-                  {selectedNode.incoming_edges.map(edge => (
-                    <Tag key={edge.id} color={EDGE_TYPES[edge.relation_type]?.color}>
-                      ← {edge.source?.name}
-                    </Tag>
-                  ))}
-                </div>
-              )}
-              {(!selectedNode.outgoing_edges || selectedNode.outgoing_edges.length === 0) &&
-               (!selectedNode.incoming_edges || selectedNode.incoming_edges.length === 0) && (
-                <span style={{ color: '#9ca3af' }}>暂无关联节点</span>
-              )}
+            <div>
+              <h5 style={{ marginBottom: 12, color: '#e0e0e0', fontSize: 14, fontWeight: 600 }}>关联节点</h5>
+              <div style={{ 
+                background: '#1a1a2e', 
+                borderRadius: 8, 
+                padding: 16,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 12,
+              }}>
+                {selectedNode.outgoing_edges?.length > 0 && (
+                  <div>
+                    <div style={{ color: '#9ca3af', fontSize: 12, marginBottom: 8 }}>出边（指向）：</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {selectedNode.outgoing_edges.map(edge => (
+                        <Tag key={edge.id} color={EDGE_TYPES[edge.relation_type]?.color} style={{ margin: 0 }}>
+                          → {edge.target?.name}
+                        </Tag>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {selectedNode.incoming_edges?.length > 0 && (
+                  <div>
+                    <div style={{ color: '#9ca3af', fontSize: 12, marginBottom: 8 }}>入边（来源）：</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {selectedNode.incoming_edges.map(edge => (
+                        <Tag key={edge.id} color={EDGE_TYPES[edge.relation_type]?.color} style={{ margin: 0 }}>
+                          ← {edge.source?.name}
+                        </Tag>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {(!selectedNode.outgoing_edges || selectedNode.outgoing_edges.length === 0) &&
+                 (!selectedNode.incoming_edges || selectedNode.incoming_edges.length === 0) && (
+                  <div style={{ color: '#9ca3af', textAlign: 'center', padding: 8 }}>暂无关联节点</div>
+                )}
+              </div>
             </div>
 
             {/* 操作按钮 */}
-            <div style={{ marginTop: 24 }}>
-              <Space>
-                <Button
-                  danger
-                  onClick={() => handleDeleteNode(selectedNode.id)}
-                >
-                  删除节点
-                </Button>
-              </Space>
+            <div>
+              <Button
+                danger
+                block
+                onClick={() => handleDeleteNode(selectedNode.id)}
+              >
+                删除节点
+              </Button>
             </div>
           </div>
         )}
@@ -603,6 +648,7 @@ function KnowledgeGraph() {
           form.resetFields()
         }}
         footer={null}
+        zIndex={1100}
       >
         <Form
           form={form}
@@ -663,6 +709,7 @@ function KnowledgeGraph() {
           edgeForm.resetFields()
         }}
         footer={null}
+        zIndex={1100}
       >
         <Form
           form={edgeForm}
