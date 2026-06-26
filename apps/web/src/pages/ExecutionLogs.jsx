@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Table, Tag, Select, DatePicker, Space, App, Button, Modal } from 'antd'
-import { LoadingOutlined, EyeOutlined } from '@ant-design/icons'
+import { LoadingOutlined, EyeOutlined, DownOutlined, UpOutlined } from '@ant-design/icons'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { executionLogApi } from '@agent-monitor/api'
@@ -12,6 +12,7 @@ function ExecutionLogs() {
   const [statusFilter, setStatusFilter] = useState(null)
   const [selectedLog, setSelectedLog] = useState(null)
   const [detailVisible, setDetailVisible] = useState(false)
+  const [summaryExpanded, setSummaryExpanded] = useState(false)
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 20,
@@ -189,11 +190,13 @@ function ExecutionLogs() {
         onCancel={() => {
           setDetailVisible(false)
           setSelectedLog(null)
+          setSummaryExpanded(false)
         }}
         footer={[
           <Button key="close" onClick={() => {
             setDetailVisible(false)
             setSelectedLog(null)
+            setSummaryExpanded(false)
           }}>
             关闭
           </Button>
@@ -221,9 +224,28 @@ function ExecutionLogs() {
 
             {selectedLog.result_summary && (
               <div className="mb-4">
-                <h4 className="text-sm font-medium text-gray-300 mb-2">结果摘要</h4>
-                <div className="p-3 bg-gray-900 rounded text-sm text-gray-200">
-                  {selectedLog.result_summary}
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-medium text-gray-300">结果摘要</h4>
+                  <Button 
+                    type="link" 
+                    size="small"
+                    icon={summaryExpanded ? <UpOutlined /> : <DownOutlined />}
+                    onClick={() => setSummaryExpanded(!summaryExpanded)}
+                  >
+                    {summaryExpanded ? '收起' : '展开全部'}
+                  </Button>
+                </div>
+                <div className="relative">
+                  <div 
+                    className={`p-3 bg-gray-900 rounded text-sm text-gray-200 transition-all duration-300 ${
+                      summaryExpanded ? 'max-h-none' : 'max-h-32 overflow-hidden'
+                    }`}
+                  >
+                    {selectedLog.result_summary}
+                  </div>
+                  {!summaryExpanded && selectedLog.result_summary.length > 200 && (
+                    <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-gray-900 to-transparent pointer-events-none rounded-b" />
+                  )}
                 </div>
               </div>
             )}
