@@ -374,7 +374,7 @@ function ErrorLogs() {
               </div>
               <div>
                 <label className="text-muted text-sm">发生时间</label>
-                <p className="text-primary">{currentError.created_at}</p>
+                <p className="text-primary">{currentError.created_at ? new Date(currentError.created_at).toLocaleString('zh-CN', { hour12: false }) : '-'}</p>
               </div>
             </div>
             <div>
