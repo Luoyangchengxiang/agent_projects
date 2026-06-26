@@ -21,8 +21,6 @@
     "echarts": "^5.0.0",
     "echarts-for-react": "^3.0.0",
     "lucide-react": "^1.21.0",
-    "pixi-live2d-display": "^0.4.0",
-    "pixi.js": "^6.5.10",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-markdown": "^10.1.0",

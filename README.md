@@ -22,8 +22,7 @@ Agent Monitor 是一个智能体执行监控平台的前端部分，用于实时
 | **数据请求** | Axios | ^1.0.0 | HTTP 客户端（封装了拦截器） |
 | **数据请求** | TanStack Query | ^5.0.0 | 服务端状态管理 + 缓存 |
 | **图表** | ECharts | ^5.0.0 | 数据可视化图表 |
-| **Live2D** | pixi-live2d-display | ^0.4.0 | 看板娘 Live2D 渲染 |
-| **Canvas** | pixi.js | ^6.0.0 | 2D 渲染引擎 |
+| **Markdown** | react-markdown | ^9.0.0 | Markdown 渲染 |
 | **测试** | Vitest | ^2.0.0 | 单元测试框架 |
 | **测试** | @testing-library/react | ^16.0.0 | React 组件测试工具 |
 | **语言** | JavaScript (JSX) | - | 主语言，TS 仅用于类型定义 |
@@ -67,6 +66,7 @@ agent-monitor/
             │   ├── Sidebar.jsx
             │   ├── ProtectedRoute.jsx
             │   ├── ErrorStats.jsx
+            │   ├── NotificationPanel.jsx  # ⭐ 消息中心面板
             │   ├── login-animation/       # 登录页动画
             │   │   ├── LoginPage.jsx
             │   │   ├── AnimatedCharacters.jsx
@@ -78,8 +78,9 @@ agent-monitor/
             │   │   ├── ChatButton.jsx      # 悬浮按钮
             │   │   └── chat.css
             │   └── mascot/                # ⭐ 看板娘模块
-            │       ├── Mascot.jsx          # 看板娘主组件
-            │       ├── Live2DRenderer.jsx  # Live2D 渲染
+            │       ├── Mascot.jsx          # 看板娘主组件（可拖拽）
+            │       ├── CatAvatar.jsx       # SVG 小猫形象
+            │       ├── Live2DRenderer.jsx  # 渲染器
             │       ├── RadialMenu.jsx      # 环状菜单
             │       ├── mascot.css
             │       └── radial-menu.css
@@ -94,11 +95,13 @@ agent-monitor/
             │   ├── ChatAdmin.jsx          # ⭐ 客服管理后台
             │   ├── chat-admin.css
             │   ├── MascotSelect.jsx       # ⭐ 看板娘形象选择
-            │   └── mascot-select.css
+            │   ├── mascot-select.css
+            │   └── PermissionManagement.jsx # ⭐ 权限管理
             │
             ├── styles/
             │   ├── variables.css
-            │   └── components.css
+            │   ├── components.css
+            │   └── notification.css       # ⭐ 消息中心样式
             │
             └── __tests__/
                 ├── setup.js
@@ -154,6 +157,14 @@ pnpm test:coverage # 覆盖率
 | 邮箱密码登录 | 正常登录 |
 | 注册新账号 | /register |
 
+## 👤 用户权限系统
+
+| 角色 | 说明 |
+|------|------|
+| **普通用户** | 仅可查看执行结果摘要 |
+| **VIP 用户** | 可查看摘要 + 完整内容 |
+| **管理员** | 完整权限 + 用户权限管理 |
+
 ## 🤖 客服系统
 
 ### 功能
@@ -174,29 +185,31 @@ pnpm test:coverage # 覆盖率
 
 ### 功能
 
-- Live2D 模型渲染（17个形象可选）
+- SVG 小猫形象渲染（5种颜色可选）
+- 可拖拽改变位置（位置自动保存）
 - 环状交互菜单（5个功能入口）
 - 屏幕边界检测（菜单始终保持可视）
 - 形象选择（首次登录选择，绑定用户不可更改）
 - 集成客服对话（环状菜单→客服对话）
+- 点击切换表情（normal / happy / surprised）
+- 眨眼动画 + 尾巴摇摆动画
 
 ### 形象列表
 
-| ID | 名称 | ID | 名称 |
-|----|------|----|------|
-| hijiki | 黑猫咪 🐱 | tororo | 白猫咪 😺 |
-| shizuku | 萌娘 👧 | wanko | 狗狗 🐶 |
-| z16 | 萌妹1号 👩 | koharu | 萌妹2号 👱‍♀️ |
-| hibiki | 萌妹3号 🎶 | izumi | 妹子4号 💫 |
-| miku | 初音 🎵 | nico | Nico ✨ |
-| unitychan | Unity酱 🎮 | haruto | 帅哥2号 🧑 |
+| ID | 名称 | 颜色 |
+|----|------|------|
+| cat-black | 黑猫咪 🐱 | 深黑色 |
+| cat-white | 白猫咪 😺 | 纯白色 |
+| cat-orange | 橘猫咪 🐈 | 橘色 |
+| cat-gray | 灰猫咪 😸 | 灰色 |
+| cat-pink | 粉猫咪 😻 | 粉色 |
 
 ### 交互流程
 
 ```
 首次登录 → 选择看板娘形象 → 进入系统
                             ↓
-              看板娘出现在右下角
+              看板娘出现在右下角（可拖拽）
                             ↓
               Hover → 问号提示 "点击互动"
                             ↓
@@ -204,6 +217,17 @@ pnpm test:coverage # 覆盖率
                             ↓
               💬 客服对话 / 📊 系统状态 / ❤️ 互动 / ⚙️ 设置 / 📋 日志
 ```
+
+## 🔔 消息中心
+
+Header 右侧铃铛图标，点击弹出消息中心面板：
+
+| 分类 | 说明 |
+|------|------|
+| 智能体执行结果 | 最近的执行结果通知 |
+| 错误日志 | 新的错误告警 |
+| 客服消息 | 用户发送的客服消息 |
+| 系统更新 | 版本更新内容 |
 
 ## 📡 API 接口
 
@@ -216,7 +240,9 @@ pnpm test:coverage # 覆盖率
 | `/api/agents` | GET/POST | Agent列表/创建 |
 | `/api/execution-logs` | GET | 执行日志 |
 | `/api/dashboard/stats` | GET | 仪表盘统计 |
+| `/api/dashboard/result-summaries` | GET | 执行结果汇总 |
 | `/api/error-logs` | GET | 错误日志 |
+| `/api/error-logs/stats` | GET | 错误统计 |
 | `/api/chat/conversations` | POST/GET | 创建/获取对话 |
 | `/api/chat/messages` | POST | 发送消息 |
 | `/api/chat/takeover` | POST | 人工接管 |
@@ -224,6 +250,7 @@ pnpm test:coverage # 覆盖率
 | `/api/chat/close` | POST | 关闭对话 |
 | `/api/chat/human-reply` | POST | 人工回复 |
 | `/api/chat/status` | GET | 客服系统状态 |
+| `/api/permissions` | GET/PUT | 用户权限管理 |
 
 ## 🧪 测试覆盖
 
@@ -235,12 +262,47 @@ pnpm test:coverage # 覆盖率
  Tests  26 passed (26)
 ```
 
+## 📖 参考来源 & 致谢
+
+### 设计参考
+
+| 参考项 | 来源 | 说明 |
+|--------|------|------|
+| 看板娘小猫形象 | [GitHub 黑夜模式小猫咪动画](https://cloud.tencent.com/developer/article/1835795) | SVG 小猫形象设计参考 |
+| Live2D 看板娘 | [CSDN - live2D看板娘教程](https://blog.csdn.net/qq_57421630/article/details/127162328) | 早期 Live2D 实现参考（已替换为 SVG） |
+| 登录页动画角色 | 请联系作者 | 四个卡通角色眼睛跟随鼠标动画 |
+
+### 技术参考
+
+| 参考项 | 来源 | 说明 |
+|--------|------|------|
+| React 最佳实践 | [React 官方文档](https://react.dev/) | Hooks、状态管理 |
+| Ant Design 组件 | [Ant Design](https://ant.design/) | UI 组件库 |
+| Zustand 状态管理 | [Zustand](https://zustand-demo.pmnd.rs/) | 轻量级状态管理 |
+| Tailwind CSS | [Tailwind CSS](https://tailwindcss.com/) | 原子化 CSS |
+| Vite 构建工具 | [Vite](https://vitejs.dev/) | 开发服务器 + 打包 |
+
+### 开源协议
+
+本项目使用 MIT 协议开源。
+
+### 贡献者
+
+- Agent Monitor 团队
+
+---
+
+> ⚠️ **免责声明**：本项目中的设计元素和动画效果参考了多个开源项目和教程。
+> 如有版权问题，请联系我们及时处理。
+
 ## 📝 开发注意事项
 
 1. 客服和看板娘模块已模块化，目录独立，可抽离为独立NPM包
-2. 看板娘使用 Live2D 模型，需联网加载 unpkg.com 资源
+2. 看板娘使用 SVG 渲染，无需外部资源加载
 3. 环状菜单自动检测屏幕边界，确保内容始终可视
 4. 看板娘形象选择后绑定用户，存储在 localStorage
+5. 消息中心支持分类展示（执行结果、错误日志、客服消息、系统更新）
+6. 用户权限分三级：普通用户（摘要）、VIP（完整内容）、管理员（管理权限）
 
 ## 📄 License
 

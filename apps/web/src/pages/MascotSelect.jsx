@@ -7,7 +7,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CheckOutlined, LockOutlined, ArrowRightOutlined } from '@ant-design/icons'
 import useMascotStore from '../stores/mascotStore'
-import Live2DRenderer from '../components/mascot/Live2DRenderer'
+import CatAvatar from '../components/mascot/CatAvatar'
 import './mascot-select.css'
 
 export default function MascotSelect() {
@@ -76,12 +76,7 @@ export default function MascotSelect() {
                   选择此形象作为你的看板娘
                 </div>
                 <div className="mascot-select-preview-model">
-                  <Live2DRenderer
-                    modelId={selectedModel.id}
-                    width={200}
-                    height={250}
-                    showControls={false}
-                  />
+                  <CatAvatar size={180} expression="happy" modelId={selectedModel.id} />
                 </div>
               </>
             ) : (

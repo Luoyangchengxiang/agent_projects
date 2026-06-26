@@ -5,23 +5,11 @@
 import create from 'zustand'
 
 const MODEL_LIST = [
-  { id: 'hijiki', name: '黑猫咪', url: 'https://unpkg.com/live2d-widget-model-hijiki@1.0.5/assets/hijiki.model.json', emoji: '🐱' },
-  { id: 'tororo', name: '白猫咪', url: 'https://unpkg.com/live2d-widget-model-tororo@1.0.5/assets/tororo.model.json', emoji: '😺' },
-  { id: 'shizuku', name: '萌娘', url: 'https://unpkg.com/live2d-widget-model-shizuku@1.0.5/assets/shizuku.model.json', emoji: '👧' },
-  { id: 'wanko', name: '狗狗', url: 'https://unpkg.com/live2d-widget-model-wanko@1.0.5/assets/wanko.model.json', emoji: '🐶' },
-  { id: 'z16', name: '萌妹1号', url: 'https://unpkg.com/live2d-widget-model-z16@1.0.5/assets/z16.model.json', emoji: '👩' },
-  { id: 'koharu', name: '萌妹2号', url: 'https://unpkg.com/live2d-widget-model-koharu@1.0.5/assets/koharu.model.json', emoji: '👱‍♀️' },
-  { id: 'hibiki', name: '萌妹3号', url: 'https://unpkg.com/live2d-widget-model-hibiki@1.0.5/assets/hibiki.model.json', emoji: '🎶' },
-  { id: 'izumi', name: '妹子4号', url: 'https://unpkg.com/live2d-widget-model-izumi@1.0.5/assets/izumi.model.json', emoji: '💫' },
-  { id: 'miku', name: '初音', url: 'https://unpkg.com/live2d-widget-model-miku@1.0.5/assets/miku.model.json', emoji: '🎵' },
-  { id: 'nico', name: 'Nico', url: 'https://unpkg.com/live2d-widget-model-nico@1.0.5/assets/nico.model.json', emoji: '✨' },
-  { id: 'ni-j', name: 'Ni-J', url: 'https://unpkg.com/live2d-widget-model-ni-j@1.0.5/assets/ni-j.model.json', emoji: '🌸' },
-  { id: 'nipsilon', name: 'Nipsilon', url: 'https://unpkg.com/live2d-widget-model-nipsilon@1.0.5/assets/nipsilon.model.json', emoji: '🎀' },
-  { id: 'nito', name: 'Nito', url: 'https://unpkg.com/live2d-widget-model-nito@1.0.5/assets/nito.model.json', emoji: '🌟' },
-  { id: 'tsumiki', name: 'Tsumiki', url: 'https://unpkg.com/live2d-widget-model-tsumiki@1.0.5/assets/tsumiki.model.json', emoji: '🎯' },
-  { id: 'unitychan', name: 'Unity酱', url: 'https://unpkg.com/live2d-widget-model-unitychan@1.0.5/assets/unitychan.model.json', emoji: '🎮' },
-  { id: 'chitose', name: '帅哥1号', url: 'https://unpkg.com/live2d-widget-model-chitose@1.0.5/assets/chitose.model.json', emoji: '👦' },
-  { id: 'haruto', name: '帅哥2号', url: 'https://unpkg.com/live2d-widget-model-haruto@1.0.5/assets/haruto.model.json', emoji: '🧑' },
+  { id: 'cat-black', name: '黑猫咪', emoji: '🐱', color: '#1f1f1f' },
+  { id: 'cat-white', name: '白猫咪', emoji: '😺', color: '#f5f5f5' },
+  { id: 'cat-orange', name: '橘猫咪', emoji: '🐈', color: '#ff9b6b' },
+  { id: 'cat-gray', name: '灰猫咪', emoji: '😸', color: '#8b949e' },
+  { id: 'cat-pink', name: '粉猫咪', emoji: '😻', color: '#ff6b9d' },
 ]
 
 const MASCOT_KEY = 'mascot_model_id'
@@ -50,44 +38,36 @@ const useMascotStore = create((set, get) => ({
     set({ modelId })
   },
 
-  // 是否已选择模型
+  // 检查是否已选择模型
   hasSelectedModel: () => {
     return !!localStorage.getItem(MASCOT_KEY)
   },
 
-  // Hover 状态
-  setHovering: (isHovering) => set({ isHovering }),
-
-  // 菜单开关
-  openMenu: (x, y) => {
-    // 边界检测：确保菜单不超出屏幕
-    const menuRadius = 120
-    const screenWidth = window.innerWidth
-    const screenHeight = window.innerHeight
-
-    let adjustedX = x
-    let adjustedY = y
-
-    // 右边界
-    if (x + menuRadius > screenWidth) adjustedX = screenWidth - menuRadius - 20
-    // 左边界
-    if (x - menuRadius < 0) adjustedX = menuRadius + 20
-    // 下边界
-    if (y + menuRadius > screenHeight) adjustedY = screenHeight - menuRadius - 20
-    // 上边界
-    if (y - menuRadius < 0) adjustedY = menuRadius + 20
-
-    set({ isMenuOpen: true, menuPosition: { x: adjustedX, y: adjustedY } })
-  },
-
+  // 菜单控制
+  openMenu: (x, y) => set({ isMenuOpen: true, menuPosition: { x, y } }),
   closeMenu: () => set({ isMenuOpen: false }),
 
-  // 聊天面板
-  openChat: () => set({ isChatOpen: true, isMenuOpen: false }),
+  // 客服控制
+  openChat: () => set({ isChatOpen: true }),
   closeChat: () => set({ isChatOpen: false }),
 
-  // 加载状态
-  setLoading: (isLoading) => set({ isLoading }),
+  // 悬停控制
+  setHovering: (v) => set({ isHovering: v }),
+
+  // 加载控制
+  setLoading: (v) => set({ isLoading: v }),
+
+  // 重置（退出登录时）
+  reset: () => {
+    localStorage.removeItem(MASCOT_KEY)
+    set({
+      modelId: null,
+      isMenuOpen: false,
+      isChatOpen: false,
+      isHovering: false,
+      isLoading: false,
+    })
+  },
 }))
 
 export default useMascotStore
