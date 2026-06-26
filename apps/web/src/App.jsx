@@ -13,6 +13,7 @@ const ExecutionLogs = lazy(() => import('./pages/ExecutionLogs'))
 const ErrorLogs = lazy(() => import('./pages/ErrorLogs'))
 const Reports = lazy(() => import('./pages/Reports'))
 const KnowledgeGraph = lazy(() => import('./pages/KnowledgeGraph'))
+const CronJobs = lazy(() => import('./pages/CronJobs'))
 const ChatAdmin = lazy(() => import('./pages/ChatAdmin'))
 const Login = lazy(() => import('./pages/Login'))
 const Register = lazy(() => import('./pages/Register'))
@@ -120,6 +121,7 @@ function App({ onReady }) {
             <Route path="errors" element={<ErrorLogs />} />
             <Route path="reports" element={<Reports />} />
             <Route path="graph" element={<KnowledgeGraph />} />
+            <Route path="cronjobs" element={<CronJobs />} />
             <Route path="chat" element={<ChatAdmin />} />
             <Route path="permissions" element={<PermissionManagement />} />
             <Route path="settings" element={<Settings />} />

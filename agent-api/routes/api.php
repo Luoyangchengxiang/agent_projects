@@ -108,4 +108,18 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/edges', [App\Http\Controllers\GraphController::class, 'storeEdge']);
         Route::delete('/edges/{edge}', [App\Http\Controllers\GraphController::class, 'destroyEdge']);
     });
+
+    // ==================== 定时任务 ====================
+    Route::prefix('cronjobs')->group(function () {
+        Route::get('/', [App\Http\Controllers\CronJobController::class, 'index']);
+        Route::get('/stats', [App\Http\Controllers\CronJobController::class, 'stats']);
+        Route::post('/', [App\Http\Controllers\CronJobController::class, 'store']);
+        Route::get('/{cronjob}', [App\Http\Controllers\CronJobController::class, 'show']);
+        Route::put('/{cronjob}', [App\Http\Controllers\CronJobController::class, 'update']);
+        Route::delete('/{cronjob}', [App\Http\Controllers\CronJobController::class, 'destroy']);
+        Route::post('/{cronjob}/pause', [App\Http\Controllers\CronJobController::class, 'pause']);
+        Route::post('/{cronjob}/resume', [App\Http\Controllers\CronJobController::class, 'resume']);
+        Route::post('/{cronjob}/run', [App\Http\Controllers\CronJobController::class, 'run']);
+        Route::get('/{cronjob}/logs', [App\Http\Controllers\CronJobController::class, 'logs']);
+    });
 });
