@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
-import { BellOutlined, SearchOutlined, UserOutlined, LogoutOutlined, SettingOutlined, SmileOutlined } from '@ant-design/icons'
-import { Badge, Dropdown, App } from 'antd'
+import { BellOutlined, SearchOutlined, UserOutlined, LogoutOutlined, SettingOutlined, SmileOutlined, CrownOutlined } from '@ant-design/icons'
+import { Badge, Dropdown, App, Tag } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import useAuthStore from '../stores/authStore'
 import useMascotStore from '../stores/mascotStore'
@@ -10,9 +10,12 @@ function Header() {
   const { message } = App.useApp()
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
-  const { reset: resetMascot } = useMascotStore()
+  const { reset: resetMascot, hasSelectedModel } = useMascotStore()
   const [notificationOpen, setNotificationOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
+
+  const isAdmin = user?.role === 'admin'
+  const mascotSelected = hasSelectedModel()
 
   // 接收 NotificationPanel 的未读数更新
   const handleUnreadChange = useCallback((total) => {
@@ -21,24 +24,29 @@ function Header() {
 
   // 用户菜单
   const userMenuItems = [
-    {
+    // 管理员：随时可更换看板娘
+    // 普通用户/VIP：已选定后不可更换
+    ...(isAdmin || !mascotSelected ? [{
       key: 'change-mascot',
       icon: <SmileOutlined />,
-      label: '更换看板娘',
+      label: isAdmin ? '更换看板娘' : '选择看板娘',
       onClick: () => {
-        resetMascot()
+        if (mascotSelected) resetMascot()
         navigate('/select-mascot')
       }
-    },
+    }] : [{
+      key: 'change-mascot-disabled',
+      icon: <SmileOutlined style={{ opacity: 0.4 }} />,
+      label: <span style={{ color: '#6b7280' }}>看板娘已锁定（联系管理员更换）</span>,
+      disabled: true,
+    }]),
     {
       key: 'settings',
       icon: <SettingOutlined />,
       label: '设置',
       onClick: () => navigate('/settings')
     },
-    {
-      type: 'divider'
-    },
+    { type: 'divider' },
     {
       key: 'logout',
       icon: <LogoutOutlined />,
@@ -51,6 +59,10 @@ function Header() {
       }
     }
   ]
+
+  // 角色标签颜色
+  const roleColors = { admin: 'gold', user: 'blue', vip: 'purple' }
+  const roleLabels = { admin: '管理员', user: '用户', vip: 'VIP' }
 
   return (
     <>
@@ -70,7 +82,7 @@ function Header() {
         {/* 右侧操作区 */}
         <div className="flex items-center gap-4">
           {/* 通知按钮 */}
-          <button 
+          <button
             className="btn-ghost relative"
             onClick={() => setNotificationOpen(!notificationOpen)}
           >
@@ -79,23 +91,34 @@ function Header() {
             </Badge>
           </button>
 
-          {/* 用户头像 */}
+          {/* 用户头像 + 菜单 */}
           <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
             <div className="flex items-center gap-2 cursor-pointer hover:opacity-80">
               <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center">
-                <UserOutlined className="text-primary" />
+                {isAdmin
+                  ? <CrownOutlined style={{ color: '#fadb14' }} />
+                  : <UserOutlined className="text-primary" />
+                }
               </div>
-              <span className="text-sm text-secondary">
-                {user?.username || 'Admin'}
-              </span>
+              <div className="flex flex-col items-start">
+                <span className="text-sm text-secondary leading-tight">
+                  {user?.name || user?.email || '用户'}
+                </span>
+                <Tag
+                  color={roleColors[user?.role] || 'default'}
+                  style={{ fontSize: 10, lineHeight: '14px', padding: '0 4px', margin: 0, border: 'none' }}
+                >
+                  {roleLabels[user?.role] || user?.role || '未知'}
+                </Tag>
+              </div>
             </div>
           </Dropdown>
         </div>
       </div>
 
       {/* 消息中心弹框 */}
-      <NotificationPanel 
-        open={notificationOpen} 
+      <NotificationPanel
+        open={notificationOpen}
         onClose={() => setNotificationOpen(false)}
         onUnreadChange={handleUnreadChange}
       />

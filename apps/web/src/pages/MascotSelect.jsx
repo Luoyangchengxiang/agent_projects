@@ -5,13 +5,13 @@
  */
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CheckOutlined, LockOutlined, ArrowRightOutlined } from '@ant-design/icons'
+import { CheckOutlined, LockOutlined, ArrowRightOutlined, ArrowLeftOutlined } from '@ant-design/icons'
 import useMascotStore from '../stores/mascotStore'
 import CatAvatar from '../components/mascot/CatAvatar'
 import './mascot-select.css'
 
 export default function MascotSelect() {
-  const { models, selectModel } = useMascotStore()
+  const { models, selectModel, hasSelectedModel } = useMascotStore()
   const [selected, setSelected] = useState(null)
   const [confirmed, setConfirmed] = useState(false)
   const navigate = useNavigate()
@@ -32,10 +32,28 @@ export default function MascotSelect() {
   return (
     <div className="mascot-select">
       <div className="mascot-select-container">
+        {/* 返回按钮 — 已有看板娘时显示 */}
+        {hasSelectedModel() && (
+          <button
+            onClick={() => navigate('/', { replace: true })}
+            style={{
+              position: 'absolute', top: 20, left: 20,
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: 8, padding: '8px 16px', color: '#e5e7eb', cursor: 'pointer',
+              fontSize: 14, transition: 'all 0.2s',
+            }}
+            onMouseEnter={e => { e.target.style.background = 'rgba(255,255,255,0.15)' }}
+            onMouseLeave={e => { e.target.style.background = 'rgba(255,255,255,0.08)' }}
+          >
+            <ArrowLeftOutlined /> 返回首页
+          </button>
+        )}
+
         {/* 头部 */}
         <div className="mascot-select-header">
           <h1>🎭 选择你的看板娘</h1>
-          <p>选择一个你喜欢的形象，它将陪伴你使用系统（选定后可随时在设置中更换）</p>
+          <p>选择一个你喜欢的形象，它将陪伴你使用系统</p>
         </div>
 
         {/* 主体：左侧列表 + 右侧预览 */}

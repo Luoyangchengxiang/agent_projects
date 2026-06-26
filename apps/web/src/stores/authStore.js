@@ -62,11 +62,15 @@ const useAuthStore = create((set, get) => ({
   logout: async () => {
     set({ isLoading: true })
     await authService.logout()
+    // 清理看板娘菜单/聊天状态（不清 localStorage，让下次登录时根据用户数据同步）
+    useMascotStore.getState().closeMenu()
+    useMascotStore.getState().closeChat()
     set({
       user: null,
       isAuthenticated: false,
       isLoading: false,
       error: null,
+      // 注意：不要重置 isInitialized！否则会卡在"加载中..."
     })
   },
 

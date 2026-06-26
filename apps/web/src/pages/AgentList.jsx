@@ -19,6 +19,7 @@ function AgentList() {
   const [agents, setAgents] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchText, setSearchText] = useState('')
+  const [statusFilter, setStatusFilter] = useState(null)
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
@@ -36,7 +37,7 @@ function AgentList() {
 
   useEffect(() => {
     loadAgents()
-  }, [pagination.current, pagination.pageSize])
+  }, [pagination.current, pagination.pageSize, statusFilter])
 
   const loadAgents = async () => {
     setLoading(true)
@@ -44,7 +45,8 @@ function AgentList() {
       const response = await agentApi.getList({
         page: pagination.current,
         per_page: pagination.pageSize,
-        search: searchText || undefined
+        search: searchText || undefined,
+        status: statusFilter || undefined
       })
       
       if (response.success) {
@@ -281,6 +283,18 @@ function AgentList() {
               onChange={(e) => setSearchText(e.target.value)}
               onPressEnter={() => { setPagination({ ...pagination, current: 1 }); loadAgents() }}
               className="w-64"
+            />
+            <Select
+              placeholder="状态筛选"
+              allowClear
+              value={statusFilter}
+              onChange={(val) => { setStatusFilter(val); setPagination({ ...pagination, current: 1 }) }}
+              className="w-32"
+              options={[
+                { value: 'online', label: '在线' },
+                { value: 'offline', label: '离线' },
+                { value: 'error', label: '错误' },
+              ]}
             />
             <Button type="primary" onClick={() => { setPagination({ ...pagination, current: 1 }); loadAgents() }}>搜索</Button>
           </Space>

@@ -8,6 +8,7 @@ import {
   LogoutOutlined,
   UserOutlined,
   TeamOutlined,
+  SettingOutlined,
 } from '@ant-design/icons'
 import { Badge } from 'antd'
 import useAuthStore from '../stores/authStore'
@@ -19,6 +20,7 @@ const menuItems = [
   { path: '/errors', icon: <BugOutlined />, label: '错误日志' },
   { path: '/chat', icon: <CustomerServiceOutlined />, label: '客服管理' },
   { path: '/permissions', icon: <TeamOutlined />, label: '权限管理', adminOnly: true },
+  { path: '/settings', icon: <SettingOutlined />, label: '设置' },
 ]
 
 function Sidebar() {
