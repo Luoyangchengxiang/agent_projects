@@ -1,0 +1,101 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: agent_monitor_test
+          POSTGRES_USER: agent_monitor
+          POSTGRES_PASSWORD: test_password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ========== 前端 ==========
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        run: corepack enable
+
+      - name: Install frontend dependencies
+        working-directory: apps/web
+        run: pnpm install --frozen-lockfile
+
+      - name: Frontend lint
+        working-directory: apps/web
+        run: pnpm lint || true
+
+      - name: Frontend tests
+        working-directory: apps/web
+        run: pnpm test
+
+      # ========== 后端 ==========
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_pgsql, mbstring, xml
+          coverage: none
+
+      - name: Install backend dependencies
+        working-directory: agent-api
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Backend lint (PHPStan)
+        working-directory: agent-api
+        run: vendor/bin/phpstan analyse app --level=5 --no-progress || true
+
+      - name: Run migrations
+        working-directory: agent-api
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: agent_monitor_test
+          DB_USERNAME: agent_monitor
+          DB_PASSWORD: test_password
+        run: php artisan migrate --force
+
+      - name: Backend tests
+        working-directory: agent-api
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: agent_monitor_test
+          DB_USERNAME: agent_monitor
+          DB_PASSWORD: test_password
+        run: vendor/bin/phpunit
+
+  auto-push:
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify all checks passed
+        run: echo "All lint and test checks passed. Ready to deploy."

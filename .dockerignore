@@ -1,0 +1,16 @@
+node_modules
+.git
+.github
+.env
+.env.*
+*.md
+*.log
+.DS_Store
+Thumbs.db
+agent-api/storage/logs/*
+agent-api/storage/framework/cache/*
+agent-api/storage/framework/sessions/*
+agent-api/storage/framework/views/*
+agent-api/bootstrap/cache/*.php
+apps/web/node_modules
+apps/web/dist
