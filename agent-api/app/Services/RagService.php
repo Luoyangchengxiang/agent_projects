@@ -6,18 +6,19 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 
 /**
- * RAG 客服服务
- * 基于文档向量检索回答用户问题
+ * RAG + LLM 客服服务
+ * 向量检索找文档 → 大模型生成回答
  */
 class RagService
 {
     private string $ollamaUrl;
     private string $embeddingModel = 'nomic-embed-text';
+    private string $chatModel = 'qwen2.5:1.5b';
     private ?array $knowledgeBase = null;
 
     // 相似度阈值
-    private float $highThreshold = 0.6;   // 精确匹配
-    private float $lowThreshold = 0.4;    // 模糊匹配
+    private float $highThreshold = 0.6;
+    private float $lowThreshold = 0.4;
 
     // 预设常见问题
     private array $faq = [
@@ -36,7 +37,7 @@ class RagService
 
     /**
      * 回答用户问题
-     * 
+     *
      * @return array ['type' => 'answer'|'faq'|'fallback', 'content' => string, 'source' => string|null]
      */
     public function answer(string $question): array
@@ -47,15 +48,13 @@ class RagService
             return $this->fallbackResponse();
         }
 
-        // 2. 生成问题向量
+        // 2. 向量检索
         $questionEmbedding = $this->getEmbedding($question);
         if (!$questionEmbedding) {
             return $this->fallbackResponse();
         }
 
-        // 3. 检索最相关的文档块
         $results = $this->search($questionEmbedding, $kb['chunks'], 3);
-
         if (empty($results)) {
             return $this->fallbackResponse();
         }
@@ -63,19 +62,31 @@ class RagService
         $topResult = $results[0];
         $similarity = $topResult['similarity'];
 
-        // 4. 根据相似度返回不同结果
+        // 3. 根据相似度分层处理
         if ($similarity >= $this->highThreshold) {
-            // 精确匹配：返回文档内容
+            // 高相似度：用 LLM 基于文档生成回答
+            $llmAnswer = $this->askLlm($question, $results);
             return [
                 'type' => 'answer',
-                'content' => $this->formatAnswer($topResult),
+                'content' => $llmAnswer ?? $this->formatAnswer($topResult),
                 'source' => $topResult['source'] . ' > ' . $topResult['heading'],
                 'similarity' => $similarity,
             ];
         }
 
         if ($similarity >= $this->lowThreshold) {
-            // 模糊匹配：返回相关摘要 + 建议
+            // 中相似度：LLM 尝试综合多篇文档回答
+            $llmAnswer = $this->askLlm($question, $results);
+            if ($llmAnswer) {
+                return [
+                    'type' => 'answer',
+                    'content' => $llmAnswer,
+                    'source' => $results[0]['source'] . ' > ' . $results[0]['heading'],
+                    'similarity' => $similarity,
+                ];
+            }
+
+            // LLM 失败则返回建议列表
             $suggestions = array_map(fn($r) => $r['heading'], $results);
             return [
                 'type' => 'fuzzy',
@@ -89,6 +100,68 @@ class RagService
 
         // 低相似度：兜底
         return $this->fallbackResponse();
+    }
+
+    /**
+     * 调用 LLM 基于检索结果生成回答
+     */
+    private function askLlm(string $question, array $contextChunks): ?string
+    {
+        // 拼接上下文（最多取前 2 个最相关的块，避免 prompt 过长）
+        $contextParts = [];
+        foreach (array_slice($contextChunks, 0, 2) as $chunk) {
+            $contextParts[] = "【{$chunk['heading']}】\n{$chunk['text']}";
+        }
+        $context = implode("\n\n---\n\n", $contextParts);
+
+        $prompt = <<<PROMPT
+你是一个智能客服助手。根据以下参考资料回答用户问题。
+
+要求：
+- 只基于参考资料回答，不要编造信息
+- 如果参考资料不包含答案，直接说"这个问题我需要转交人工客服"
+- 回答简洁友好，用中文
+- 不要提及"参考资料"或"文档"等词，像正常聊天一样回答
+
+参考资料：
+{$context}
+
+用户问题：{$question}
+PROMPT;
+
+        try {
+            // 使用流式响应，超时 120 秒（CPU 模型慢）
+            $response = Http::timeout(120)->post("{$this->ollamaUrl}/api/generate", [
+                'model' => $this->chatModel,
+                'prompt' => $prompt,
+                'stream' => true,
+                'options' => [
+                    'temperature' => 0.3,
+                    'num_predict' => 200,
+                ],
+            ]);
+
+            if ($response->successful()) {
+                // 流式响应拼接
+                $fullAnswer = '';
+                $lines = explode("\n", $response->body());
+                foreach ($lines as $line) {
+                    if (empty(trim($line))) continue;
+                    $chunk = json_decode($line, true);
+                    if (isset($chunk['response'])) {
+                        $fullAnswer .= $chunk['response'];
+                    }
+                }
+                $fullAnswer = trim($fullAnswer);
+                if (!empty($fullAnswer)) {
+                    return $fullAnswer;
+                }
+            }
+        } catch (\Exception $e) {
+            Log::warning('LLM 回答生成失败，回退到文档原文', ['error' => $e->getMessage()]);
+        }
+
+        return null;
     }
 
     /**
@@ -111,15 +184,12 @@ class RagService
     }
 
     /**
-     * 格式化答案
+     * 格式化答案（LLM 失败时的降级方案）
      */
     private function formatAnswer(array $result): string
     {
         $text = $result['text'];
-        
-        // 清理 markdown 标记，保留内容
         $text = preg_replace('/^#{1,3}\s+/m', '📌 ', $text);
-        
         return $text;
     }
 
@@ -156,7 +226,7 @@ class RagService
             if (empty($chunk['embedding'])) continue;
 
             $similarity = $this->cosineSimilarity($queryEmbedding, $chunk['embedding']);
-            
+
             $scored[] = [
                 'source' => $chunk['source'],
                 'heading' => $chunk['heading'],
@@ -165,9 +235,7 @@ class RagService
             ];
         }
 
-        // 按相似度降序排序
         usort($scored, fn($a, $b) => $b['similarity'] <=> $a['similarity']);
-
         return array_slice($scored, 0, $topK);
     }
 
