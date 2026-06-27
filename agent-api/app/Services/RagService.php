@@ -107,26 +107,36 @@ class RagService
      */
     private function askLlm(string $question, array $contextChunks): ?string
     {
-        // 拼接上下文（最多取前 2 个最相关的块，避免 prompt 过长）
+        // 拼接知识库上下文
         $contextParts = [];
         foreach (array_slice($contextChunks, 0, 2) as $chunk) {
             $contextParts[] = "【{$chunk['heading']}】\n{$chunk['text']}";
         }
         $context = implode("\n\n---\n\n", $contextParts);
 
-        $prompt = <<<PROMPT
-你是一个智能客服助手。根据以下参考资料回答用户问题。
+        // 追加 FAQ 作为参考
+        $faqText = '';
+        foreach ($this->faq as $item) {
+            $faqText .= "问：{$item['q']}\n答：{$item['a']}\n\n";
+        }
 
-要求：
-- 只基于参考资料回答，不要编造信息
-- 如果参考资料不包含答案，直接说"这个问题我需要转交人工客服"
-- 回答简洁友好，用中文
-- 不要提及"参考资料"或"文档"等词，像正常聊天一样回答
+        $prompt = <<<PROMPT
+你是 Agent Monitor 系统的智能客服。用户问了一个问题，请根据下面的参考资料用你自己的话简洁回答。
+
+规则：
+1. 用自然的中文回答，像朋友聊天一样
+2. 不要复制粘贴参考资料的原文，要用自己的话重新组织
+3. 如果参考资料里没有答案，就说"这个问题我不太确定，建议转交人工客服"
+4. 回答控制在 3-5 句话以内
+5. 不要出现"根据资料""参考资料显示"这类词
 
 参考资料：
 {$context}
 
-用户问题：{$question}
+常见问题参考：
+{$faqText}
+
+用户问：{$question}
 PROMPT;
 
         try {
