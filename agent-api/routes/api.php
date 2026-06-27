@@ -52,12 +52,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/dashboard/result-summaries', [App\Http\Controllers\Api\DashboardController::class, 'resultSummaries']);
     Route::get('/dashboard/agent-groups', [App\Http\Controllers\Api\DashboardController::class, 'agentGroups']);
 
-    // 错误日志
-    Route::get('/error-logs/stats', [App\Http\Controllers\Api\ErrorLogController::class, 'stats']);
-    Route::get('/error-logs/types', [App\Http\Controllers\Api\ErrorLogController::class, 'types']);
-    Route::post('/error-logs/batch-destroy', [App\Http\Controllers\Api\ErrorLogController::class, 'batchDestroy']);
-    Route::put('/error-logs/{errorLog}/resolve', [App\Http\Controllers\Api\ErrorLogController::class, 'resolve']);
-    Route::apiResource('error-logs', App\Http\Controllers\Api\ErrorLogController::class)->only(['index', 'show', 'destroy']);
+    // 错误日志（仅管理员）
+    Route::middleware('role:admin')->group(function () {
+        Route::get('/error-logs/stats', [App\Http\Controllers\Api\ErrorLogController::class, 'stats']);
+        Route::get('/error-logs/types', [App\Http\Controllers\Api\ErrorLogController::class, 'types']);
+        Route::post('/error-logs/batch-destroy', [App\Http\Controllers\Api\ErrorLogController::class, 'batchDestroy']);
+        Route::put('/error-logs/{errorLog}/resolve', [App\Http\Controllers\Api\ErrorLogController::class, 'resolve']);
+        Route::apiResource('error-logs', App\Http\Controllers\Api\ErrorLogController::class)->only(['index', 'show', 'destroy']);
+    });
 
     // ==================== 性能指标 ====================
     Route::prefix('metrics')->group(function () {
@@ -102,16 +104,20 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/status', [App\Http\Controllers\Api\ChatController::class, 'status']);
     });
 
-    // ==================== 权限管理（仅管理员）====================
-    Route::prefix('permissions')->middleware('role:admin')->group(function () {
+    // ==================== 权限管理 ====================
+    Route::prefix('permissions')->group(function () {
+        // 查看自己的权限（所有已登录用户）
         Route::get('/me', [App\Http\Controllers\Api\PermissionController::class, 'me']);
+        // 以下仅管理员
+    });
+    Route::prefix('permissions')->middleware('role:admin')->group(function () {
         Route::get('/users', [App\Http\Controllers\Api\PermissionController::class, 'index']);
         Route::put('/users/{id}/role', [App\Http\Controllers\Api\PermissionController::class, 'updateRole']);
         Route::put('/users/{id}/permissions', [App\Http\Controllers\Api\PermissionController::class, 'updatePermissions']);
     });
 
-    // ==================== 报告系统 ====================
-    Route::prefix('reports')->group(function () {
+    // ==================== 报告系统（管理员、VIP）====================
+    Route::prefix('reports')->middleware('role:admin,vip')->group(function () {
         Route::get('/', [App\Http\Controllers\ReportController::class, 'index']);
         Route::get('/{report}', [App\Http\Controllers\ReportController::class, 'show']);
         Route::get('/{report}/download', [App\Http\Controllers\ReportController::class, 'download']);
@@ -137,8 +143,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/edges/{edge}', [App\Http\Controllers\GraphController::class, 'destroyEdge']);
     });
 
-    // ==================== 定时任务 ====================
-    Route::prefix('cronjobs')->group(function () {
+    // ==================== 定时任务（仅管理员）====================
+    Route::prefix('cronjobs')->middleware('role:admin')->group(function () {
         Route::get('/', [App\Http\Controllers\CronJobController::class, 'index']);
         Route::get('/stats', [App\Http\Controllers\CronJobController::class, 'stats']);
         Route::post('/', [App\Http\Controllers\CronJobController::class, 'store']);
