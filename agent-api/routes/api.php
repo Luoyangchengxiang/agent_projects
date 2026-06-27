@@ -54,6 +54,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/error-logs/{errorLog}/resolve', [App\Http\Controllers\Api\ErrorLogController::class, 'resolve']);
     Route::apiResource('error-logs', App\Http\Controllers\Api\ErrorLogController::class)->only(['index', 'show', 'destroy']);
 
+    // ==================== 告警规则 ====================
+    Route::prefix('alerts')->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\AlertController::class, 'index']);
+        Route::post('/', [App\Http\Controllers\Api\AlertController::class, 'store']);
+        Route::get('/check', [App\Http\Controllers\Api\AlertController::class, 'check']);
+        Route::get('/{alertRule}', [App\Http\Controllers\Api\AlertController::class, 'show']);
+        Route::put('/{alertRule}', [App\Http\Controllers\Api\AlertController::class, 'update']);
+        Route::delete('/{alertRule}', [App\Http\Controllers\Api\AlertController::class, 'destroy']);
+        Route::post('/{alertRule}/check', [App\Http\Controllers\Api\AlertController::class, 'checkRule']);
+    });
+
     // ==================== 客服系统 ====================
     Route::prefix('chat')->group(function () {
         // 对话管理
