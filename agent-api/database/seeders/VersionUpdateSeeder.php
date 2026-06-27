@@ -94,7 +94,10 @@ class VersionUpdateSeeder extends Seeder
         ];
 
         foreach ($versions as $version) {
-            VersionUpdate::create($version);
+            VersionUpdate::firstOrCreate(
+                ['version' => $version['version']],
+                $version
+            );
         }
 
         $this->command->info('已创建 ' . count($versions) . ' 条版本更新记录');
