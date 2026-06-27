@@ -119,7 +119,9 @@ function App({ onReady }) {
               <Route index element={<Dashboard />} />
               <Route path="agents" element={<AgentList />} />
               <Route path="logs" element={<ExecutionLogs />} />
-              <Route path="errors" element={<ErrorLogs />} />
+              <Route path="errors" element={
+                <RoleRoute roles={['admin']}><ErrorLogs /></RoleRoute>
+              } />
               <Route path="reports" element={
                 <RoleRoute roles={['admin', 'vip']}><Reports /></RoleRoute>
               } />

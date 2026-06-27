@@ -21,7 +21,7 @@ const menuItems = [
   { path: '/', icon: <DashboardOutlined />, label: '仪表盘', roles: [] },
   { path: '/agents', icon: <RobotOutlined />, label: 'Agent列表', roles: [] },
   { path: '/logs', icon: <FileTextOutlined />, label: '执行日志', roles: [] },
-  { path: '/errors', icon: <BugOutlined />, label: '错误日志', roles: [] },
+  { path: '/errors', icon: <BugOutlined />, label: '错误日志', roles: ['admin'] },
   { path: '/reports', icon: <BarChartOutlined />, label: '数据报告', roles: ['admin', 'vip'] },
   { path: '/graph', icon: <ApartmentOutlined />, label: '知识图谱', roles: [] },
   { path: '/cronjobs', icon: <ClockCircleOutlined />, label: '定时任务', roles: ['admin'] },
