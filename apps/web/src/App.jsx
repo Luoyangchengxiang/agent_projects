@@ -108,6 +108,7 @@ function App({ onReady }) {
             }
           />
 
+          {/* 主应用布局 */}
           <Route
             path="/"
             element={
@@ -115,28 +116,28 @@ function App({ onReady }) {
                 <MainLayout />
               </ProtectedRoute>
             }
-            <Route path="/" element={<MainLayout />}>
-              <Route index element={<Dashboard />} />
-              <Route path="agents" element={<AgentList />} />
-              <Route path="logs" element={<ExecutionLogs />} />
-              <Route path="errors" element={
-                <RoleRoute roles={['admin']}><ErrorLogs /></RoleRoute>
-              } />
-              <Route path="reports" element={
-                <RoleRoute roles={['admin', 'vip']}><Reports /></RoleRoute>
-              } />
-              <Route path="graph" element={<KnowledgeGraph />} />
-              <Route path="cronjobs" element={
-                <RoleRoute roles={['admin']}><CronJobs /></RoleRoute>
-              } />
-              <Route path="chat" element={
-                <RoleRoute roles={['admin', 'support']}><ChatAdmin /></RoleRoute>
-              } />
-              <Route path="permissions" element={
-                <RoleRoute roles={['admin']}><PermissionManagement /></RoleRoute>
-              } />
-              <Route path="settings" element={<Settings />} />
-            </Route>
+          >
+            <Route index element={<Dashboard />} />
+            <Route path="agents" element={<AgentList />} />
+            <Route path="logs" element={<ExecutionLogs />} />
+            <Route path="errors" element={
+              <RoleRoute roles={['admin']}><ErrorLogs /></RoleRoute>
+            } />
+            <Route path="reports" element={
+              <RoleRoute roles={['admin', 'vip']}><Reports /></RoleRoute>
+            } />
+            <Route path="graph" element={<KnowledgeGraph />} />
+            <Route path="cronjobs" element={
+              <RoleRoute roles={['admin']}><CronJobs /></RoleRoute>
+            } />
+            <Route path="chat" element={
+              <RoleRoute roles={['admin', 'support']}><ChatAdmin /></RoleRoute>
+            } />
+            <Route path="permissions" element={
+              <RoleRoute roles={['admin']}><PermissionManagement /></RoleRoute>
+            } />
+            <Route path="settings" element={<Settings />} />
+          </Route>
         </Routes>
       </Suspense>
     </ErrorBoundary>
