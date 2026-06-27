@@ -1,0 +1,820 @@
+openapi: 3.0.3
+info:
+  title: Agent Monitor API
+  description: |
+    Agent 监控系统 API 文档
+    
+    ## 认证
+    大部分接口需要 Bearer Token 认证。通过 `/api/auth/login` 获取 Token。
+    
+    ## 限流策略
+    - GET/HEAD/OPTIONS: 不限流
+    - POST/PUT/DELETE/PATCH: 60次/10秒
+    - 登录: 20次/分钟
+    - 注册: 5次/分钟
+  version: 1.0.0
+  contact:
+    name: Aaron_Cheng
+    email: aaron_cheng0606@163.com
+
+servers:
+  - url: http://localhost:8000/api
+    description: 本地开发环境
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Auth
+    description: 认证相关
+  - name: Agents
+    description: Agent 管理
+  - name: Dashboard
+    description: 仪表盘
+  - name: ErrorLogs
+    description: 错误日志
+  - name: Alerts
+    description: 告警规则
+  - name: Metrics
+    description: 性能指标
+  - name: ExecutionLogs
+    description: 执行日志
+  - name: Reports
+    description: 数据报告
+  - name: Graph
+    description: 知识图谱
+  - name: CronJobs
+    description: 定时任务
+  - name: Chat
+    description: 客服系统
+  - name: Permissions
+    description: 权限管理
+  - name: VersionUpdates
+    description: 版本更新
+
+paths:
+  # ==================== 认证 ====================
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: 登录
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  example: admin@example.com
+                password:
+                  type: string
+                  example: password123
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/User'
+                      token:
+                        type: string
+                      is_local_login:
+                        type: boolean
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: 注册
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '201':
+          description: 注册成功
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: 获取当前用户
+      responses:
+        '200':
+          description: 成功
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: 退出登录
+      responses:
+        '200':
+          description: 已退出
+
+  # ==================== Agent ====================
+  /agents:
+    get:
+      tags: [Agents]
+      summary: Agent 列表
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+    post:
+      tags: [Agents]
+      summary: 创建 Agent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentInput'
+      responses:
+        '201':
+          description: 创建成功
+
+  /agents/{id}:
+    get:
+      tags: [Agents]
+      summary: Agent 详情
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: 成功
+    put:
+      tags: [Agents]
+      summary: 更新 Agent
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: 更新成功
+    delete:
+      tags: [Agents]
+      summary: 删除 Agent
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: 删除成功
+
+  # ==================== 仪表盘 ====================
+  /dashboard/stats:
+    get:
+      tags: [Dashboard]
+      summary: 仪表盘统计数据
+      responses:
+        '200':
+          description: 成功
+
+  /dashboard/charts:
+    get:
+      tags: [Dashboard]
+      summary: 图表数据
+      responses:
+        '200':
+          description: 成功
+
+  # ==================== 错误日志 ====================
+  /error-logs:
+    get:
+      tags: [ErrorLogs]
+      summary: 错误日志列表
+      parameters:
+        - name: error_type
+          in: query
+          schema:
+            type: string
+        - name: severity
+          in: query
+          schema:
+            type: string
+            enum: [critical, high, medium, low, info]
+        - name: is_resolved
+          in: query
+          schema:
+            type: boolean
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+
+  /error-logs/stats:
+    get:
+      tags: [ErrorLogs]
+      summary: 错误统计
+      responses:
+        '200':
+          description: 成功
+
+  /error-logs/{id}:
+    get:
+      tags: [ErrorLogs]
+      summary: 错误详情
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: 成功
+    delete:
+      tags: [ErrorLogs]
+      summary: 删除错误日志
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: 删除成功
+
+  /error-logs/{id}/resolve:
+    put:
+      tags: [ErrorLogs]
+      summary: 标记为已解决
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                resolution_notes:
+                  type: string
+      responses:
+        '200':
+          description: 已标记
+
+  # ==================== 告警规则 ====================
+  /alerts:
+    get:
+      tags: [Alerts]
+      summary: 告警规则列表
+      parameters:
+        - name: is_enabled
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: 成功
+    post:
+      tags: [Alerts]
+      summary: 创建告警规则
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlertRuleInput'
+      responses:
+        '201':
+          description: 创建成功
+
+  /alerts/check:
+    get:
+      tags: [Alerts]
+      summary: 手动检查所有规则
+      responses:
+        '200':
+          description: 检查结果
+
+  /alerts/{id}:
+    get:
+      tags: [Alerts]
+      summary: 规则详情
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: 成功
+    put:
+      tags: [Alerts]
+      summary: 更新规则
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: 更新成功
+    delete:
+      tags: [Alerts]
+      summary: 删除规则
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: 删除成功
+
+  /alerts/{id}/check:
+    post:
+      tags: [Alerts]
+      summary: 检查单条规则
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: 检查结果
+
+  # ==================== 性能指标 ====================
+  /metrics:
+    get:
+      tags: [Metrics]
+      summary: 指标列表
+      parameters:
+        - name: agent_id
+          in: query
+          schema:
+            type: integer
+        - name: metric_name
+          in: query
+          schema:
+            type: string
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+    post:
+      tags: [Metrics]
+      summary: 记录指标
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MetricInput'
+      responses:
+        '201':
+          description: 记录成功
+    delete:
+      tags: [Metrics]
+      summary: 删除指标数据
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [agent_id]
+              properties:
+                agent_id:
+                  type: integer
+                before_date:
+                  type: string
+                  format: date
+      responses:
+        '200':
+          description: 删除成功
+
+  /metrics/batch:
+    post:
+      tags: [Metrics]
+      summary: 批量记录指标
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [metrics]
+              properties:
+                metrics:
+                  type: array
+                  maxItems: 100
+                  items:
+                    $ref: '#/components/schemas/MetricInput'
+      responses:
+        '201':
+          description: 批量记录成功
+
+  /metrics/names:
+    get:
+      tags: [Metrics]
+      summary: 获取所有指标类型
+      responses:
+        '200':
+          description: 成功
+
+  /metrics/{agentId}/stats:
+    get:
+      tags: [Metrics]
+      summary: Agent 指标统计
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: metric_name
+          in: query
+          schema:
+            type: string
+            default: cpu
+        - name: minutes
+          in: query
+          schema:
+            type: integer
+            default: 60
+      responses:
+        '200':
+          description: 成功
+
+  /metrics/{agentId}/trend:
+    get:
+      tags: [Metrics]
+      summary: Agent 指标趋势
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: metric_name
+          in: query
+          schema:
+            type: string
+            default: cpu
+        - name: hours
+          in: query
+          schema:
+            type: integer
+            default: 24
+      responses:
+        '200':
+          description: 成功
+
+  /metrics/{agentId}/overview:
+    get:
+      tags: [Metrics]
+      summary: Agent 指标概览
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+
+  # ==================== 执行日志 ====================
+  /execution-logs:
+    get:
+      tags: [ExecutionLogs]
+      summary: 执行日志列表
+      responses:
+        '200':
+          description: 成功
+
+  /execution-logs/{id}:
+    get:
+      tags: [ExecutionLogs]
+      summary: 执行日志详情
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: 成功
+
+  # ==================== 报告 ====================
+  /reports:
+    get:
+      tags: [Reports]
+      summary: 报告列表
+      responses:
+        '200':
+          description: 成功
+
+  /reports/generate/weekly:
+    post:
+      tags: [Reports]
+      summary: 生成周报
+      responses:
+        '201':
+          description: 生成成功
+
+  /reports/generate/monthly:
+    post:
+      tags: [Reports]
+      summary: 生成月报
+      responses:
+        '201':
+          description: 生成成功
+
+  # ==================== 知识图谱 ====================
+  /graph:
+    get:
+      tags: [Graph]
+      summary: 获取图谱数据
+      responses:
+        '200':
+          description: 成功
+
+  /graph/search:
+    get:
+      tags: [Graph]
+      summary: 搜索节点
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+
+  /graph/nodes:
+    post:
+      tags: [Graph]
+      summary: 创建节点
+      responses:
+        '201':
+          description: 创建成功
+
+  /graph/edges:
+    post:
+      tags: [Graph]
+      summary: 创建边
+      responses:
+        '201':
+          description: 创建成功
+
+  # ==================== 定时任务 ====================
+  /cronjobs:
+    get:
+      tags: [CronJobs]
+      summary: 定时任务列表
+      responses:
+        '200':
+          description: 成功
+    post:
+      tags: [CronJobs]
+      summary: 创建定时任务
+      responses:
+        '201':
+          description: 创建成功
+
+  /cronjobs/stats:
+    get:
+      tags: [CronJobs]
+      summary: 任务统计
+      responses:
+        '200':
+          description: 成功
+
+  /cronjobs/{id}:
+    get:
+      tags: [CronJobs]
+      summary: 任务详情
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: 成功
+    put:
+      tags: [CronJobs]
+      summary: 更新任务
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: 更新成功
+    delete:
+      tags: [CronJobs]
+      summary: 删除任务
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: 删除成功
+
+  /cronjobs/{id}/pause:
+    post:
+      tags: [CronJobs]
+      summary: 暂停任务
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: 已暂停
+
+  /cronjobs/{id}/resume:
+    post:
+      tags: [CronJobs]
+      summary: 恢复任务
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: 已恢复
+
+  /cronjobs/{id}/run:
+    post:
+      tags: [CronJobs]
+      summary: 手动执行
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: 已执行
+
+  # ==================== 客服 ====================
+  /chat/conversations:
+    get:
+      tags: [Chat]
+      summary: 对话列表
+      responses:
+        '200':
+          description: 成功
+    post:
+      tags: [Chat]
+      summary: 创建对话
+      responses:
+        '201':
+          description: 创建成功
+
+  /chat/messages:
+    post:
+      tags: [Chat]
+      summary: 发送消息
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [conversation_id, content]
+              properties:
+                conversation_id:
+                  type: integer
+                content:
+                  type: string
+      responses:
+        '201':
+          description: 发送成功
+
+  /chat/takeover:
+    post:
+      tags: [Chat]
+      summary: 人工接管
+      responses:
+        '200':
+          description: 已接管
+
+  /chat/release:
+    post:
+      tags: [Chat]
+      summary: 释放给 AI
+      responses:
+        '200':
+          description: 已释放
+
+  /chat/close:
+    post:
+      tags: [Chat]
+      summary: 关闭对话
+      responses:
+        '200':
+          description: 已关闭
+
+  # ==================== 版本更新 ====================
+  /version-updates:
+    get:
+      tags: [VersionUpdates]
+      summary: 版本列表
+      responses:
+        '200':
+          description: 成功
+    post:
+      tags: [VersionUpdates]
+      summary: 创建版本记录
+      responses:
+        '201':
+          description: 创建成功
+
+  /version-updates/latest:
+    get:
+      tags: [VersionUpdates]
+      summary: 最新版本
+      responses:
+        '200':
+          description: 成功
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+
+    AgentInput:
+      type: object
+      required: [name, type]
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [active, inactive, error]
+
+    AlertRuleInput:
+      type: object
+      required: [name, threshold_count, time_window_minutes]
+      properties:
+        name:
+          type: string
+        error_type:
+          type: string
+        severity:
+          type: string
+          enum: [critical, high, medium, low, info]
+        threshold_count:
+          type: integer
+          minimum: 1
+        time_window_minutes:
+          type: integer
+          minimum: 1
+        is_enabled:
+          type: boolean
+        notify_method:
+          type: string
+          enum: [log, webhook]
+        webhook_url:
+          type: string
+          format: uri
+        description:
+          type: string
+
+    MetricInput:
+      type: object
+      required: [agent_id, metric_name, metric_value]
+      properties:
+        agent_id:
+          type: integer
+        metric_name:
+          type: string
+          enum: [cpu, memory, response_time, request_count, error_rate]
+        metric_value:
+          type: number
+        tags:
+          type: object
+        recorded_at:
+          type: string
+          format: date-time
