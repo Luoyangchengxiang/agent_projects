@@ -306,6 +306,79 @@
   cursor: not-allowed;
 }
 
+/* FAQ 常见问题 */
+.chat-faq-list {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.chat-faq-title {
+  font-size: 12px;
+  color: var(--text-secondary, #999);
+  margin-bottom: 8px;
+}
+
+.chat-faq-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 6px 10px;
+  margin-bottom: 4px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  background: rgba(0, 212, 255, 0.05);
+  color: #00d4ff;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.chat-faq-btn:hover:not(:disabled) {
+  background: rgba(0, 212, 255, 0.15);
+  border-color: rgba(0, 212, 255, 0.4);
+}
+
+.chat-faq-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 转人工按钮 */
+.chat-transfer-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 12px;
+  margin-top: 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(82, 196, 26, 0.3);
+  background: rgba(82, 196, 26, 0.1);
+  color: #52c41a;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.chat-transfer-btn:hover:not(:disabled) {
+  background: rgba(82, 196, 26, 0.2);
+  border-color: rgba(82, 196, 26, 0.5);
+}
+
+.chat-transfer-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 消息内容格式化 */
+.chat-msg-content {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.6;
+}
+
 /* 发送失败消息 */
 .chat-msg-failed {
   display: flex;

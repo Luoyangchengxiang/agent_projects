@@ -1,14 +1,20 @@
 /**
  * 客服聊天面板组件
- * 独立模块，后续可接入看板娘环状菜单
+ * 基于 RAG 文档检索回答用户问题
  */
 import { useState, useRef, useEffect } from 'react'
-import { SendOutlined, CloseOutlined, RobotOutlined, UserOutlined, CustomerServiceOutlined, ReloadOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
+import { 
+  SendOutlined, CloseOutlined, RobotOutlined, UserOutlined, 
+  CustomerServiceOutlined, ReloadOutlined, ExclamationCircleOutlined 
+} from '@ant-design/icons'
 import useChatStore from '../../stores/chatStore'
 import './chat.css'
 
 export default function ChatPanel({ embedded = false, onClose }) {
-  const { conversation, messages, isLoading, isSending, sendMessage, initConversation, retryMessage } = useChatStore()
+  const { 
+    conversation, messages, isLoading, isSending, sendMessage, 
+    initConversation, retryMessage, transferToHuman 
+  } = useChatStore()
   const [input, setInput] = useState('')
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
@@ -36,6 +42,18 @@ export default function ChatPanel({ embedded = false, onClose }) {
     if (isSending) return
     await retryMessage(msgId, content)
     inputRef.current?.focus()
+  }
+
+  // 转人工
+  const handleTransferToHuman = async () => {
+    if (isSending) return
+    await transferToHuman()
+  }
+
+  // 点击常见问题
+  const handleFaqClick = async (question) => {
+    if (isSending) return
+    await sendMessage(question)
   }
 
   const handleKeyDown = (e) => {
@@ -104,15 +122,48 @@ export default function ChatPanel({ embedded = false, onClose }) {
               </div>
             )}
             <div className="chat-bubble-wrap">
-              {msg.sender_type !== 'user' && (
+              {msg.sender_type !== 'user' && msg.sender_type !== 'system' && (
                 <span className="chat-sender-name">{getSenderName(msg)}</span>
               )}
               <div className="chat-bubble">
                 {msg.sender_type === 'system' ? (
                   <div className="chat-system-msg">{msg.content}</div>
                 ) : (
-                  <span>{msg.content}</span>
+                  <div className="chat-msg-content">
+                    {msg.content.split('\n').map((line, i) => (
+                      <span key={i}>
+                        {line.startsWith('📌') ? <strong>{line}</strong> : line}
+                        {i < msg.content.split('\n').length - 1 && <br />}
+                      </span>
+                    ))}
+                  </div>
                 )}
+
+                {/* FAQ 按钮（兜底回复时展示） */}
+                {msg.metadata?.faq && msg.metadata.faq.length > 0 && (
+                  <div className="chat-faq-list">
+                    <div className="chat-faq-title">💡 你可能想问：</div>
+                    {msg.metadata.faq.map((item, i) => (
+                      <button 
+                        key={i} 
+                        className="chat-faq-btn"
+                        onClick={() => handleFaqClick(item.q)}
+                        disabled={isSending}
+                      >
+                        {item.q}
+                      </button>
+                    ))}
+                    <button 
+                      className="chat-transfer-btn"
+                      onClick={handleTransferToHuman}
+                      disabled={isSending}
+                    >
+                      <CustomerServiceOutlined /> 转人工客服
+                    </button>
+                  </div>
+                )}
+
+                {/* 发送失败提示 */}
                 {msg._failed && (
                   <div className="chat-msg-failed">
                     <ExclamationCircleOutlined /> 发送失败
@@ -152,6 +203,9 @@ export default function ChatPanel({ embedded = false, onClose }) {
 
       {/* 输入框 */}
       <div className="chat-input-area">
+        {isHumanMode && (
+          <div className="chat-input-hint">人工客服服务中</div>
+        )}
         <textarea
           ref={inputRef}
           className="chat-input"

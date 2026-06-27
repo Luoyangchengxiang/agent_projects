@@ -97,6 +97,9 @@ Route::middleware('auth:sanctum')->group(function () {
         // 系统状态
         Route::get('/status', [App\Http\Controllers\Api\ChatController::class, 'status']);
 
+        // 转人工（所有用户可用）
+        Route::post('/transfer-human', [App\Http\Controllers\Api\ChatController::class, 'transferToHuman']);
+
         // 人工接管/释放（仅管理员、客服）
         Route::middleware('role:admin,support')->group(function () {
             Route::post('/takeover', [App\Http\Controllers\Api\ChatController::class, 'takeover']);

@@ -5,15 +5,15 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Conversation;
 use App\Models\ChatMessage;
-use App\Services\OllamaService;
+use App\Models\User;
+use App\Services\RagService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 
 class ChatController extends Controller
 {
     public function __construct(
-        private OllamaService $ollama
+        private RagService $rag
     ) {}
 
     /**
@@ -22,7 +22,6 @@ class ChatController extends Controller
      */
     public function createConversation(Request $request): JsonResponse
     {
-        // 检查是否有活跃对话，有则复用
         $existing = Conversation::where('user_id', $request->user()->id)
             ->where('status', 'active')
             ->first();
@@ -46,7 +45,7 @@ class ChatController extends Controller
             'conversation_id' => $conversation->id,
             'sender_type' => 'ai',
             'sender_id' => null,
-            'content' => '你好！我是小助手 🤖 有什么关于系统的问题都可以问我哦~',
+            'content' => "你好！我是小助手 🤖\n\n我可以帮你解答关于系统使用的各种问题。你可以问我：\n\n• 如何添加新的 Agent？\n• 怎么查看运行状态？\n• 如何配置定时任务？\n• 报错了怎么办？\n\n或者直接描述你的问题，我会尽力帮你解答！",
         ]);
 
         return response()->json([
@@ -57,19 +56,17 @@ class ChatController extends Controller
 
     /**
      * GET /api/chat/conversations
-     * 获取对话列表（管理后台用）
+     * 获取对话列表
      */
     public function conversations(Request $request): JsonResponse
     {
         $query = Conversation::with(['user', 'humanAgent', 'lastMessage'])
             ->orderBy('last_message_at', 'desc');
 
-        // 管理员和客服看所有，普通用户只看自己的
         if (!in_array($request->user()->role, ['admin', 'support'])) {
             $query->where('user_id', $request->user()->id);
         }
 
-        // 筛选
         if ($request->has('status')) {
             $query->where('status', $request->status);
         }
@@ -87,10 +84,9 @@ class ChatController extends Controller
 
     /**
      * GET /api/chat/conversations/{id}
-     * 获取单个对话详情（含消息）
+     * 获取单个对话详情
      */
     public function conversationDetail(Request $request, Conversation $conversation): JsonResponse
-    // 安全检查：管理员和客服可以看所有对话，普通用户只能看自己的
     {
         if (!in_array($request->user()->role, ['admin', 'support']) && $conversation->user_id !== $request->user()->id) {
             return response()->json(['success' => false, 'message' => '无权访问'], 403);
@@ -107,7 +103,7 @@ class ChatController extends Controller
 
     /**
      * POST /api/chat/messages
-     * 发送消息并获取AI回复
+     * 发送消息并获取回复
      */
     public function sendMessage(Request $request): JsonResponse
     {
@@ -137,9 +133,8 @@ class ChatController extends Controller
 
         $conversation->update(['last_message_at' => now()]);
 
-        // 根据模式决定回复方式
+        // 人工接管模式
         if ($conversation->mode === 'human') {
-            // 人工接管模式：不自动回复，通知真人客服
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -151,15 +146,27 @@ class ChatController extends Controller
             ]);
         }
 
-        // AI模式：调用Ollama获取回复
-        $aiReply = $this->getAiReply($conversation);
+        // AI 模式：使用 RAG 检索回答
+        $ragResult = $this->rag->answer($request->content);
+
+        $aiContent = $ragResult['content'];
+        $metadata = [
+            'rag_type' => $ragResult['type'],
+            'similarity' => $ragResult['similarity'] ?? null,
+            'source' => $ragResult['source'] ?? null,
+        ];
+
+        // 附加常见问题（兜底时）
+        if ($ragResult['type'] === 'fallback') {
+            $metadata['faq'] = $ragResult['faq'] ?? [];
+        }
 
         $aiMessage = ChatMessage::create([
             'conversation_id' => $conversation->id,
             'sender_type' => 'ai',
             'sender_id' => null,
-            'content' => $aiReply ?: '抱歉，我暂时无法回答这个问题 😅 建议联系人工客服获取帮助。',
-            'metadata' => $aiReply ? ['model' => config('ollama.model')] : ['error' => 'ollama_failed'],
+            'content' => $aiContent,
+            'metadata' => $metadata,
         ]);
 
         $conversation->update(['last_message_at' => now()]);
@@ -170,6 +177,7 @@ class ChatController extends Controller
                 'user_message' => $this->formatMessage($userMessage),
                 'ai_message' => $this->formatMessage($aiMessage),
                 'mode' => 'ai',
+                'rag_type' => $ragResult['type'],
             ],
         ]);
     }
@@ -187,7 +195,6 @@ class ChatController extends Controller
         $conversation = Conversation::findOrFail($request->conversation_id);
         $conversation->takeOver($request->user()->id);
 
-        // 系统消息
         ChatMessage::create([
             'conversation_id' => $conversation->id,
             'sender_type' => 'system',
@@ -289,6 +296,69 @@ class ChatController extends Controller
     }
 
     /**
+     * POST /api/chat/transfer-human
+     * 用户请求转人工
+     */
+    public function transferToHuman(Request $request): JsonResponse
+    {
+        $request->validate([
+            'conversation_id' => 'required|exists:conversations,id',
+        ]);
+
+        $conversation = Conversation::findOrFail($request->conversation_id);
+
+        if ($conversation->user_id !== $request->user()->id && !in_array($request->user()->role, ['admin', 'support'])) {
+            return response()->json(['success' => false, 'message' => '无权操作'], 403);
+        }
+
+        // 记录转人工请求
+        ChatMessage::create([
+            'conversation_id' => $conversation->id,
+            'sender_type' => 'system',
+            'content' => '用户请求转接人工客服，正在通知客服人员...',
+        ]);
+
+        // 通知所有 admin 和 support（存储通知到数据库或日志）
+        $this->notifyAgents($conversation, $request->user());
+
+        return response()->json([
+            'success' => true,
+            'message' => '已通知客服人员，请等待接入',
+            'data' => [
+                'conversation_id' => $conversation->id,
+                'status' => 'waiting',
+            ],
+        ]);
+    }
+
+    /**
+     * 通知客服人员有新的转人工请求
+     */
+    private function notifyAgents(Conversation $conversation, $user): void
+    {
+        // 获取所有 admin 和 support 用户
+        $agents = User::whereIn('role', ['admin', 'support'])->get();
+
+        foreach ($agents as $agent) {
+            ChatMessage::create([
+                'conversation_id' => $conversation->id,
+                'sender_type' => 'system',
+                'content' => "📢 用户 {$user->nickname}({$user->name}) 请求人工客服",
+                'metadata' => [
+                    'type' => 'transfer_request',
+                    'target_agent_id' => $agent->id,
+                ],
+            ]);
+        }
+
+        \Log::info('转人工通知已发送', [
+            'conversation_id' => $conversation->id,
+            'user_id' => $user->id,
+            'agents_notified' => $agents->pluck('id')->toArray(),
+        ]);
+    }
+
+    /**
      * GET /api/chat/status
      * 检查客服系统状态
      */
@@ -297,8 +367,7 @@ class ChatController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'ollama_available' => $this->ollama->isAvailable(),
-                'models' => $this->ollama->getModels(),
+                'rag_available' => file_exists(storage_path('app/knowledge-base.json')),
                 'active_conversations' => Conversation::active()->count(),
                 'human_mode_conversations' => Conversation::active()->humanMode()->count(),
             ],
@@ -307,30 +376,6 @@ class ChatController extends Controller
 
     // ==================== 私有方法 ====================
 
-    /**
-     * 获取AI回复
-     */
-    private function getAiReply(Conversation $conversation): ?string
-    {
-        // 取最近10条消息作为上下文
-        $history = $conversation->messages()
-            ->where('sender_type', '!=', 'system')
-            ->orderBy('created_at', 'desc')
-            ->limit(10)
-            ->get()
-            ->reverse()
-            ->map(fn($m) => [
-                'role' => $m->sender_type === 'user' ? 'user' : 'assistant',
-                'content' => $m->content,
-            ])
-            ->toArray();
-
-        return $this->ollama->chat($history);
-    }
-
-    /**
-     * 格式化对话数据
-     */
     private function formatConversation(Conversation $conversation): array
     {
         return [
@@ -346,9 +391,6 @@ class ChatController extends Controller
         ];
     }
 
-    /**
-     * 格式化消息数据
-     */
     private function formatMessage(ChatMessage $message): array
     {
         return [

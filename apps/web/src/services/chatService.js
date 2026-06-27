@@ -82,6 +82,16 @@ export const chatService = {
   },
 
   /**
+   * 转人工
+   */
+  async transferToHuman(conversationId) {
+    const res = await request.post('/chat/transfer-human', {
+      conversation_id: conversationId,
+    })
+    return res.data
+  },
+
+  /**
    * 获取客服系统状态
    */
   async getStatus() {
