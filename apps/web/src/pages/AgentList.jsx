@@ -6,7 +6,11 @@ import {
   DeleteOutlined,
   EyeOutlined,
   LockOutlined,
-  ExclamationCircleOutlined
+  ExclamationCircleOutlined,
+  CaretRightOutlined,
+  LoadingOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined
 } from '@ant-design/icons'
 import { Table, Tag, Button, Input, Space, App, Modal, Form, Select, Tooltip } from 'antd'
 import { agentApi } from '@agent-monitor/api'
@@ -34,6 +38,12 @@ function AgentList() {
   const [form] = Form.useForm()
   const [createForm] = Form.useForm()
   const [submitting, setSubmitting] = useState(false)
+
+  // 执行弹框状态
+  const [runVisible, setRunVisible] = useState(false)
+  const [runInput, setRunInput] = useState('')
+  const [runLoading, setRunLoading] = useState(false)
+  const [runResult, setRunResult] = useState(null)
 
   useEffect(() => {
     loadAgents()
@@ -160,6 +170,39 @@ function AgentList() {
     })
   }
 
+  // 执行 Agent
+  const handleRun = (record) => {
+    setCurrentAgent(record)
+    setRunInput('')
+    setRunResult(null)
+    setRunVisible(true)
+  }
+
+  // 提交执行
+  const handleRunSubmit = async () => {
+    if (!runInput.trim()) {
+      message.warning('请输入内容')
+      return
+    }
+    setRunLoading(true)
+    setRunResult(null)
+    try {
+      const res = await agentApi.run(currentAgent.id, { input: runInput })
+      setRunResult(res.data)
+      if (res.success) {
+        message.success('执行完成')
+      } else {
+        message.warning('执行完成但有错误')
+      }
+      loadAgents() // 刷新状态
+    } catch (error) {
+      setRunResult(error?.data || { status: 'failed', error: '请求失败' })
+      message.error('执行失败')
+    } finally {
+      setRunLoading(false)
+    }
+  }
+
   // 格式化时间
   const formatTime = (text) => {
     if (!text) return '-'
@@ -204,7 +247,17 @@ function AgentList() {
       title: '模型',
       key: 'model',
       width: 120,
-      render: (_, record) => <span className="text-muted">{record.config?.model || '-'}</span>
+      render: (_, record) => <span className="text-muted">{record.model || record.config?.model || '-'}</span>
+    },
+    {
+      title: '执行器',
+      key: 'executor_type',
+      width: 80,
+      render: (_, record) => {
+        const map = { ollama: { color: 'cyan', text: 'Ollama' }, api: { color: 'orange', text: 'API' }, shell: { color: 'red', text: 'Shell' } }
+        const item = map[record.executor_type] || { color: 'default', text: record.executor_type }
+        return <Tag color={item.color}>{item.text}</Tag>
+      }
     },
     {
       title: '状态',
@@ -227,11 +280,19 @@ function AgentList() {
     {
       title: '操作',
       key: 'action',
-      width: 150,
+      width: 180,
       render: (_, record) => {
         const isProtected = PROTECTED_IDS.includes(record.id)
         return (
           <Space>
+            <Tooltip title="执行任务">
+              <Button
+                type="text"
+                icon={<CaretRightOutlined />}
+                style={{ color: '#52c41a' }}
+                onClick={() => handleRun(record)}
+              />
+            </Tooltip>
             <Tooltip title="查看详情">
               <Button type="text" icon={<EyeOutlined />} className="text-primary" onClick={() => handleView(record)} />
             </Tooltip>
@@ -460,6 +521,84 @@ function AgentList() {
             <Input.TextArea rows={6} placeholder="输入 Agent 的系统提示词..." />
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* 执行弹框 */}
+      <Modal
+        title={
+          <span>
+            <CaretRightOutlined style={{ color: '#52c41a', marginRight: 8 }} />
+            执行 Agent — {currentAgent?.name}
+          </span>
+        }
+        open={runVisible}
+        onCancel={() => setRunVisible(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setRunVisible(false)}>关闭</Button>,
+          <Button
+            key="run"
+            type="primary"
+            icon={runLoading ? <LoadingOutlined /> : <CaretRightOutlined />}
+            loading={runLoading}
+            onClick={handleRunSubmit}
+            disabled={!runInput.trim()}
+          >
+            {runLoading ? '执行中...' : '执行'}
+          </Button>,
+        ]}
+        width={700}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* 输入区 */}
+          <div>
+            <label style={{ color: '#9ca3af', fontSize: 12, marginBottom: 4, display: 'block' }}>输入内容</label>
+            <Input.TextArea
+              rows={3}
+              placeholder="输入要发送给 Agent 的内容..."
+              value={runInput}
+              onChange={(e) => setRunInput(e.target.value)}
+              onPressEnter={(e) => {
+                if (e.ctrlKey || e.metaKey) handleRunSubmit()
+              }}
+              disabled={runLoading}
+            />
+            <span style={{ color: '#6b7280', fontSize: 11 }}>Ctrl+Enter 快速执行</span>
+          </div>
+
+          {/* 执行结果 */}
+          {runResult && (
+            <div>
+              <label style={{ color: '#9ca3af', fontSize: 12, marginBottom: 4, display: 'block' }}>
+                执行结果
+                {runResult.status === 'success' ? (
+                  <Tag color="success" style={{ marginLeft: 8 }}>
+                    <CheckCircleOutlined /> 成功 · {runResult.duration_formatted}
+                  </Tag>
+                ) : (
+                  <Tag color="error" style={{ marginLeft: 8 }}>
+                    <CloseCircleOutlined /> 失败 · {runResult.duration_formatted}
+                  </Tag>
+                )}
+              </label>
+              <pre style={{
+                background: '#1a1d24',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 8,
+                padding: '12px 16px',
+                marginTop: 4,
+                color: runResult.status === 'success' ? '#e5e7eb' : '#f87171',
+                fontSize: 13,
+                lineHeight: 1.6,
+                maxHeight: 300,
+                overflow: 'auto',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-all',
+              }}>
+                {runResult.status === 'success' ? runResult.output : (runResult.error || '未知错误')}
+              </pre>
+            </div>
+          )}
+        </div>
       </Modal>
     </div>
   )

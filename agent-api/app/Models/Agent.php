@@ -11,6 +11,10 @@ class Agent extends Model
         'name',
         'type',
         'status',
+        'executor_type',
+        'executor_config',
+        'model',
+        'system_prompt',
         'config',
         'metadata',
         'last_active_at',
@@ -19,6 +23,7 @@ class Agent extends Model
     protected $casts = [
         'config' => 'array',
         'metadata' => 'array',
+        'executor_config' => 'array',
         'last_active_at' => 'datetime',
     ];
 
@@ -60,5 +65,21 @@ class Agent extends Model
     public function hasError(): bool
     {
         return $this->status === 'error';
+    }
+
+    /**
+     * 获取模型名（优先 agent 自己的 model，否则从 config 取）
+     */
+    public function getModelName(): string
+    {
+        return $this->model ?? $this->config['model'] ?? 'qwen2.5:3b';
+    }
+
+    /**
+     * 获取系统提示词
+     */
+    public function getSystemPrompt(): string
+    {
+        return $this->system_prompt ?? $this->config['prompt'] ?? '你是一个AI助手，请根据用户输入回答问题。';
     }
 }

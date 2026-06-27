@@ -83,6 +83,20 @@ export const agentApi = {
   // 删除Agent
   delete(id: number): Promise<ApiResponse<void>> {
     return api.delete(`/agents/${id}`)
+  },
+
+  // 执行Agent任务
+  run(id: number, data: { input: string; context?: any }): Promise<ApiResponse<{
+    task_id: string
+    status: string
+    input: string
+    output: string | null
+    error: string | null
+    duration: number
+    duration_formatted: string
+    created_at: string
+  }>> {
+    return api.post(`/agents/${id}/run`, data)
   }
 }
 

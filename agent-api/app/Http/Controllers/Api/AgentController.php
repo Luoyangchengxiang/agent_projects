@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
+use App\Services\AgentExecutor;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -53,12 +54,17 @@ class AgentController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'type' => 'required|in:online,local',
+            'type' => 'required|in:online,local,team',
+            'executor_type' => 'nullable|in:ollama,api,shell',
+            'executor_config' => 'nullable|array',
+            'model' => 'nullable|string|max:100',
+            'system_prompt' => 'nullable|string|max:2000',
             'config' => 'nullable|array',
             'metadata' => 'nullable|array',
         ]);
 
         $validated['status'] = 'offline';
+        $validated['executor_type'] = $validated['executor_type'] ?? 'ollama';
 
         $agent = Agent::create($validated);
 
@@ -91,8 +97,12 @@ class AgentController extends Controller
     {
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
-            'type' => 'sometimes|in:online,local',
+            'type' => 'sometimes|in:online,local,team',
             'status' => 'sometimes|in:online,offline,error',
+            'executor_type' => 'sometimes|in:ollama,api,shell',
+            'executor_config' => 'nullable|array',
+            'model' => 'nullable|string|max:100',
+            'system_prompt' => 'nullable|string|max:2000',
             'config' => 'nullable|array',
             'metadata' => 'nullable|array',
         ]);
@@ -117,5 +127,45 @@ class AgentController extends Controller
             'success' => true,
             'message' => 'Agent删除成功',
         ]);
+    }
+
+    /**
+     * 执行 Agent 任务
+     * POST /api/agents/{agent}/run
+     */
+    public function run(Request $request, Agent $agent, AgentExecutor $executor): JsonResponse
+    {
+        $validated = $request->validate([
+            'input' => 'required|string|max:5000',
+            'context' => 'nullable|array',
+        ]);
+
+        try {
+            $log = $executor->execute(
+                $agent,
+                $validated['input'],
+                $validated['context'] ?? []
+            );
+
+            return response()->json([
+                'success' => $log->status === 'success',
+                'data' => [
+                    'task_id' => $log->task_id,
+                    'status' => $log->status,
+                    'input' => $log->input,
+                    'output' => $log->output,
+                    'error' => $log->error,
+                    'duration' => $log->duration,
+                    'duration_formatted' => $log->formatted_duration,
+                    'created_at' => $log->created_at,
+                ],
+            ], $log->status === 'success' ? 200 : 500);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => '执行失败: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 }

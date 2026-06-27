@@ -37,6 +37,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Agent相关
     Route::apiResource('agents', App\Http\Controllers\Api\AgentController::class);
+    Route::post('/agents/{agent}/run', [App\Http\Controllers\Api\AgentController::class, 'run']);
 
     // 执行日志
     Route::apiResource('execution-logs', App\Http\Controllers\Api\ExecutionLogController::class)->only(['index', 'show']);
