@@ -31,20 +31,10 @@ import {
 import { graphApi } from '../services/graphApi'
 import G6Graph from '../components/G6Graph'
 import { NODE_TYPES, EDGE_TYPES, getNodeStatus } from '../constants/graphConstants'
+import { escapeHtml } from '../utils/htmlUtils'
 
 const { Search } = Input
 const { Option } = Select
-
-// HTML 转义，防止 XSS
-const escapeHtml = (str) => {
-  if (!str) return ''
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;')
-}
 
 function KnowledgeGraph() {
   const [loading, setLoading] = useState(false)

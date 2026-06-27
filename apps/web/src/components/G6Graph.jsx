@@ -6,23 +6,13 @@
 import React, { useEffect, useRef, useCallback } from 'react'
 import { Graph } from '@antv/g6'
 import { NODE_TYPES, EDGE_TYPES, getNodeStatus } from '../constants/graphConstants'
+import { escapeHtml } from '../utils/htmlUtils'
 
 // 获取节点类型配置
 const getTypeConfig = (type) => NODE_TYPES[type] || NODE_TYPES.agent
 
 // 获取边类型配置
 const getEdgeConfig = (relationType) => EDGE_TYPES[relationType] || EDGE_TYPES.contains
-
-// HTML 转义，防止 XSS
-const escapeHtml = (str) => {
-  if (!str) return ''
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;')
-}
 
 function G6Graph({ graphData, onNodeClick, highlightNodeIds = [] }) {
   const containerRef = useRef(null)
