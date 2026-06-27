@@ -6,9 +6,13 @@ on:
   pull_request:
     branches: [master]
 
+env:
+  # 禁止自动升级到 Node.js 24（兼容 Node.js 20 actions）
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "false"
+
 jobs:
   lint-and-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     services:
       postgres:
@@ -26,11 +30,11 @@ jobs:
           - 5432:5432
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
 
       # ========== 前端 ==========
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v4.4.0
         with:
           node-version: '20'
 
@@ -89,11 +93,11 @@ jobs:
 
   auto-push:
     needs: lint-and-test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
