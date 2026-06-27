@@ -18,10 +18,14 @@ import {
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { executionLogApi, errorLogApi, versionUpdateApi } from '@agent-monitor/api'
+import useAuthStore from '../stores/authStore'
 
 export default function NotificationPanel({ open, onClose, onUnreadChange }) {
   const { message } = App.useApp()
   const navigate = useNavigate()
+  const { user } = useAuthStore()
+  const isAdmin = user?.role === 'admin'
+  const isSupport = user?.role === 'support'
   const [activeTab, setActiveTab] = useState('executions')
   const [loading, setLoading] = useState(false)
   const [notifications, setNotifications] = useState({
@@ -86,7 +90,7 @@ export default function NotificationPanel({ open, onClose, onUnreadChange }) {
     try {
       const [executionsRes, errorsRes, updatesRes] = await Promise.all([
         executionLogApi.getList({ page: 1, per_page: 10 }).catch(() => ({ data: { data: [] } })),
-        errorLogApi.getList({ page: 1, per_page: 10, status: 'open' }).catch(() => ({ data: { data: [] } })),
+        isAdmin ? errorLogApi.getList({ page: 1, per_page: 10, status: 'open' }).catch(() => ({ data: { data: [] } })) : Promise.resolve({ data: { data: [] } }),
         versionUpdateApi.getLatest().catch(() => ({ data: [] }))
       ])
 
@@ -144,10 +148,11 @@ export default function NotificationPanel({ open, onClose, onUnreadChange }) {
         navigate('/logs')
         break
       case 'error':
-        navigate('/errors')
+        if (isAdmin) navigate('/errors')
         break
       case 'msg':
-        navigate('/chat')
+        // 客服/管理员跳管理页，普通用户不跳转（通过看板娘聊天）
+        if (isAdmin || isSupport) navigate('/chat')
         break
       case 'update':
         // 版本更新不跳转
@@ -365,7 +370,8 @@ export default function NotificationPanel({ open, onClose, onUnreadChange }) {
       ),
       children: renderExecutions()
     },
-    {
+    // 错误日志仅 admin 可见
+    ...(isAdmin ? [{
       key: 'errors',
       label: (
         <span>
@@ -375,7 +381,7 @@ export default function NotificationPanel({ open, onClose, onUnreadChange }) {
         </span>
       ),
       children: renderErrors()
-    },
+    }] : []),
     {
       key: 'messages',
       label: (
