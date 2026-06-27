@@ -179,3 +179,106 @@ describe('后端权限中间件配置验证', () => {
     })
   })
 })
+
+describe('用户管理功能验证', () => {
+  // 模拟 PermissionController 的验证规则
+  const validateUsername = (name) => {
+    if (!name || !name.trim()) return '请输入用户名'
+    if (name.length > 50) return '用户名不能超过50个字符'
+    if (!/^[a-zA-Z0-9_-]+$/.test(name)) return '用户名只能包含字母、数字、下划线和短横线'
+    return null
+  }
+
+  const validatePassword = (password) => {
+    if (!password) return '请输入密码'
+    if (password.length < 6) return '密码不能少于6位'
+    return null
+  }
+
+  const validateCreateUser = (name, password, existingNames = []) => {
+    const nameError = validateUsername(name)
+    if (nameError) return nameError
+    if (existingNames.includes(name)) return '该用户名已存在'
+    const pwdError = validatePassword(password)
+    if (pwdError) return pwdError
+    return null
+  }
+
+  describe('用户名验证', () => {
+    it('空用户名返回错误', () => {
+      expect(validateUsername('')).toBe('请输入用户名')
+    })
+
+    it('纯字母用户名通过', () => {
+      expect(validateUsername('admin')).toBeNull()
+    })
+
+    it('含数字和下划线通过', () => {
+      expect(validateUsername('user_01')).toBeNull()
+    })
+
+    it('含短横线通过', () => {
+      expect(validateUsername('test-user')).toBeNull()
+    })
+
+    it('含特殊字符拒绝', () => {
+      expect(validateUsername('user@name')).toBe('用户名只能包含字母、数字、下划线和短横线')
+    })
+
+    it('含空格拒绝', () => {
+      expect(validateUsername('user name')).toBe('用户名只能包含字母、数字、下划线和短横线')
+    })
+
+    it('超长用户名拒绝', () => {
+      expect(validateUsername('a'.repeat(51))).toBe('用户名不能超过50个字符')
+    })
+
+    it('50字符用户名通过', () => {
+      expect(validateUsername('a'.repeat(50))).toBeNull()
+    })
+  })
+
+  describe('密码验证', () => {
+    it('空密码返回错误', () => {
+      expect(validatePassword('')).toBe('请输入密码')
+    })
+
+    it('少于6位拒绝', () => {
+      expect(validatePassword('12345')).toBe('密码不能少于6位')
+    })
+
+    it('6位密码通过', () => {
+      expect(validatePassword('123456')).toBeNull()
+    })
+
+    it('长密码通过', () => {
+      expect(validatePassword('a'.repeat(100))).toBeNull()
+    })
+  })
+
+  describe('创建用户完整验证', () => {
+    it('正常创建通过', () => {
+      expect(validateCreateUser('newuser', 'pass123')).toBeNull()
+    })
+
+    it('重复用户名拒绝', () => {
+      expect(validateCreateUser('admin', 'pass123', ['admin', 'test'])).toBe('该用户名已存在')
+    })
+
+    it('不重复用户名通过', () => {
+      expect(validateCreateUser('newuser', 'pass123', ['admin'])).toBeNull()
+    })
+  })
+
+  describe('删除用户安全规则', () => {
+    const canDelete = (currentUserId, targetUserId) => currentUserId !== targetUserId
+
+    it('不能删除自己', () => {
+      expect(canDelete(1, 1)).toBe(false)
+    })
+
+    it('可以删除其他用户', () => {
+      expect(canDelete(1, 2)).toBe(true)
+    })
+  })
+})
