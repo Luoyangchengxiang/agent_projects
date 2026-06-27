@@ -76,6 +76,7 @@ jobs:
           DB_DATABASE: agent_monitor_test
           DB_USERNAME: agent_monitor
           DB_PASSWORD: test_password
+          APP_KEY: base64:WMNIlCvJCSfU/Gvr6vw5zmnnx6NzqDZJ4yKipcPeQK0=
         run: php artisan migrate --force
 
       - name: Backend tests
@@ -87,6 +88,7 @@ jobs:
           DB_DATABASE: agent_monitor_test
           DB_USERNAME: agent_monitor
           DB_PASSWORD: test_password
+          APP_KEY: base64:WMNIlCvJCSfU/Gvr6vw5zmnnx6NzqDZJ4yKipcPeQK0=
         run: vendor/bin/phpunit
 
   auto-push:
