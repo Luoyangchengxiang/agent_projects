@@ -36,3 +36,6 @@ coverage/
 # Laravel
 storage/*.key
 bootstrap/cache/*.php
+
+# 数据库备份
+backups/
