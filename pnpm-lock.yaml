@@ -117,12 +117,6 @@ importers:
         specifier: ^2.0.0
         version: 2.0.0(@types/node@26.0.0)(jsdom@29.1.1)(terser@5.48.0)
 
-  docs-site:
-    devDependencies:
-      vitepress:
-        specifier: ^1.6.4
-        version: 1.6.4(@algolia/client-search@5.55.1)(@types/node@26.0.0)(@types/react@18.3.31)(axios@1.18.0)(postcss@8.5.15)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(search-insights@2.17.3)(terser@5.48.0)
-
   packages/api:
     dependencies:
       axios:

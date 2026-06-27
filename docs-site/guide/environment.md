@@ -4,7 +4,7 @@
 
 | 工具 | 版本 | 说明 |
 |------|------|------|
-| Node.js | 20+ | 前端运行环境 |
+| Node.js | 22+ | 前端运行环境 (LTS) |
 | pnpm | 8+ | 包管理器 |
 | PHP | 8.2+ | 后端运行环境 |
 | Composer | 2+ | PHP 包管理器 |
@@ -27,12 +27,12 @@ wsl --install -d Ubuntu-24.04
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
 source ~/.bashrc
 
-# 安装 Node.js 20
-nvm install 20
-nvm use 20
+# 安装 Node.js 22 (LTS)
+nvm install 22
+nvm use 22
 
 # 验证
-node -v  # v20.x.x
+node -v  # v22.x.x
 npm -v
 ```
 
