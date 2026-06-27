@@ -36,13 +36,15 @@ export default function Live2DRenderer({ onHover, onClick }) {
 
     // 如果不是 Live2D 模型，直接标记失败（显示 CatAvatar）
     if (!modelPath) {
+      console.log('[Live2D] 非 Live2D 模型，显示 CatAvatar')
       setLive2dFailed(true)
       setLive2dReady(false)
       return
     }
 
-    // 检查 loadlive2d 是否可用
-    if (typeof window.loadlive2d !== 'function') {
+    // 检查 loadlive2d 是否可用（尝试多种可能的函数名）
+    const loadFn = window.loadlive2d || window.loadLive2D
+    if (typeof loadFn !== 'function') {
       console.warn('[Live2D] loadlive2d 未定义，回退到 CatAvatar')
       setLive2dFailed(true)
       return
@@ -52,6 +54,8 @@ export default function Live2DRenderer({ onHover, onClick }) {
     setLive2dFailed(false)
     setLive2dReady(false)
 
+    console.log('[Live2D] 开始加载模型:', modelPath)
+
     // 超时保护
     timeoutRef.current = setTimeout(() => {
       if (!readyRef.current) {
@@ -60,23 +64,56 @@ export default function Live2DRenderer({ onHover, onClick }) {
       }
     }, LOAD_TIMEOUT)
 
-    try {
-      window.loadlive2d('live2d-canvas', modelPath, 0.5)
-      innerTimeoutRef.current = setTimeout(() => {
+    // 延迟加载，确保 Canvas 已挂载到 DOM
+    innerTimeoutRef.current = setTimeout(() => {
+      try {
         const canvas = document.getElementById('live2d-canvas')
-        if (canvas && canvas.width > 0) {
-          setLive2dReady(true)
-          clearTimeout(timeoutRef.current)
-        } else {
+        if (!canvas) {
+          console.warn('[Live2D] Canvas 未找到，回退到 CatAvatar')
           setLive2dFailed(true)
-          clearTimeout(timeoutRef.current)
+          return
         }
-      }, 3000)
-    } catch (err) {
-      console.warn('[Live2D] 加载失败:', err)
-      setLive2dFailed(true)
-      clearTimeout(timeoutRef.current)
-    }
+
+        loadFn('live2d-canvas', modelPath, 0.5)
+
+        // 检测 Canvas 状态
+        let checkCount = 0
+        const maxChecks = 6
+        const checkInterval = 500
+
+        const checkCanvas = () => {
+          checkCount++
+          const c = document.getElementById('live2d-canvas')
+
+          console.log('[Live2D] 检查 Canvas (check ' + checkCount + '):', {
+            exists: !!c,
+            width: c?.width,
+            height: c?.height,
+          })
+
+          if (c && c.width > 0 && c.height > 0) {
+            console.log('[Live2D] 模型加载成功')
+            setLive2dReady(true)
+            clearTimeout(timeoutRef.current)
+            return
+          }
+
+          if (checkCount < maxChecks) {
+            setTimeout(checkCanvas, checkInterval)
+          } else {
+            console.warn('[Live2D] Canvas 检测失败，回退到 CatAvatar')
+            setLive2dFailed(true)
+            clearTimeout(timeoutRef.current)
+          }
+        }
+
+        setTimeout(checkCanvas, checkInterval)
+      } catch (err) {
+        console.error('[Live2D] 加载异常:', err)
+        setLive2dFailed(true)
+        clearTimeout(timeoutRef.current)
+      }
+    }, 100) // 等待 Canvas 挂载
 
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current)

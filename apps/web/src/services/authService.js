@@ -8,13 +8,13 @@ import { tokenManager } from './tokenManager'
 
 export const authService = {
   /**
-   * 登录
-   * @param {string} email - 邮箱或用户名
+   * 登录（支持用户名或邮箱）
+   * @param {string} login - 用户名或邮箱
    * @param {string} password - 密码
    * @returns {Promise<{user: object, token: string, is_local_login: boolean}>}
    */
-  async login(email, password) {
-    const res = await request.post('/auth/login', { email, password })
+  async login(login, password) {
+    const res = await request.post('/auth/login', { login, password })
     // 后端返回格式: { success: true, data: { user, token, is_local_login } }
     const { user, token, is_local_login } = res.data
 
@@ -81,6 +81,15 @@ export const authService = {
       ...params,
       password_confirmation: params.password,
     })
+    return res
+  },
+
+  /**
+   * 修改昵称
+   * @param {string} nickname - 新昵称
+   */
+  async updateNickname(nickname) {
+    const res = await request.put('/auth/nickname', { nickname })
     return res
   },
 

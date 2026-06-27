@@ -18,10 +18,12 @@ import { settingsApi } from '@agent-monitor/api'
 
 export default function Settings() {
   const { message } = App.useApp()
-  const { user } = useAuthStore()
+  const { user, refreshUser } = useAuthStore()
   const { modelId, models, hasSelectedModel, reset: resetMascot } = useMascotStore()
   const [passwordForm] = Form.useForm()
+  const [nicknameForm] = Form.useForm()
   const [changingPassword, setChangingPassword] = useState(false)
+  const [changingNickname, setChangingNickname] = useState(false)
 
   // 系统设置状态
   const [systemSettings, setSystemSettings] = useState(null)
@@ -97,8 +99,8 @@ export default function Settings() {
   }
 
   // 角色标签
-  const roleColors = { admin: 'gold', user: 'blue', vip: 'purple' }
-  const roleLabels = { admin: '管理员', user: '普通用户', vip: 'VIP用户' }
+  const roleColors = { admin: 'gold', support: 'cyan', user: 'blue', vip: 'purple' }
+  const roleLabels = { admin: '管理员', support: '客服人员', user: '普通用户', vip: 'VIP用户' }
 
   const cardStyle = { marginBottom: 20, background: '#24272e', border: '1px solid rgba(255,255,255,0.08)' }
   const headerStyle = { background: '#1a1d24', borderBottom: '1px solid rgba(255,255,255,0.06)' }
@@ -118,6 +120,7 @@ export default function Settings() {
       >
         <Descriptions column={2} labelStyle={labelStyle} contentStyle={{ color: '#e5e7eb' }}>
           <Descriptions.Item label="用户名">{user?.name || '-'}</Descriptions.Item>
+          <Descriptions.Item label="昵称">{user?.nickname || '-'}</Descriptions.Item>
           <Descriptions.Item label="邮箱">{user?.email || '-'}</Descriptions.Item>
           <Descriptions.Item label="角色">
             <Tag color={roleColors[user?.role] || 'default'} icon={isAdmin ? <CrownOutlined /> : <UserOutlined />}>
@@ -132,6 +135,44 @@ export default function Settings() {
           <Descriptions.Item label="最后登录">{user?.last_login_at || '-'}</Descriptions.Item>
           <Descriptions.Item label="注册时间">{user?.created_at || '-'}</Descriptions.Item>
         </Descriptions>
+      </Card>
+
+      {/* 修改昵称卡片 */}
+      <Card
+        title={<span style={{ color: '#e5e7eb' }}><UserOutlined style={{ marginRight: 8 }} />修改昵称</span>}
+        style={cardStyle}
+        styles={{ header: headerStyle }}
+      >
+        <Form
+          form={nicknameForm}
+          layout="vertical"
+          initialValues={{ nickname: user?.nickname }}
+          onFinish={async (values) => {
+            setChangingNickname(true)
+            try {
+              await authService.updateNickname(values.nickname)
+              await refreshUser()
+              message.success('昵称修改成功')
+            } catch (error) {
+              message.error(error.message || '昵称修改失败')
+            } finally {
+              setChangingNickname(false)
+            }
+          }}
+          style={{ maxWidth: 400 }}
+        >
+          <Form.Item name="nickname" label="昵称" rules={[
+            { required: true, message: '请输入昵称' },
+            { max: 50, message: '昵称不能超过50个字符' }
+          ]}>
+            <Input placeholder="输入新昵称" />
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={changingNickname}>
+              保存昵称
+            </Button>
+          </Form.Item>
+        </Form>
       </Card>
 
       {/* 修改密码卡片 */}

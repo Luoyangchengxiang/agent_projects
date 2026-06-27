@@ -64,8 +64,8 @@ class ChatController extends Controller
         $query = Conversation::with(['user', 'humanAgent', 'lastMessage'])
             ->orderBy('last_message_at', 'desc');
 
-        // 管理员看所有，普通用户只看自己的
-        if ($request->user()->role !== 'admin') {
+        // 管理员和客服看所有，普通用户只看自己的
+        if (!in_array($request->user()->role, ['admin', 'support'])) {
             $query->where('user_id', $request->user()->id);
         }
 
@@ -90,9 +90,9 @@ class ChatController extends Controller
      * 获取单个对话详情（含消息）
      */
     public function conversationDetail(Request $request, Conversation $conversation): JsonResponse
-    // 安全检查：非管理员只能看自己的对话
+    // 安全检查：管理员和客服可以看所有对话，普通用户只能看自己的
     {
-        if ($request->user()->role !== 'admin' && $conversation->user_id !== $request->user()->id) {
+        if (!in_array($request->user()->role, ['admin', 'support']) && $conversation->user_id !== $request->user()->id) {
             return response()->json(['success' => false, 'message' => '无权访问'], 403);
         }
 
@@ -269,7 +269,7 @@ class ChatController extends Controller
             return response()->json(['success' => false, 'message' => '该对话未被接管'], 400);
         }
 
-        if ($conversation->human_agent_id !== $request->user()->id && $request->user()->role !== 'admin') {
+        if ($conversation->human_agent_id !== $request->user()->id && !in_array($request->user()->role, ['admin', 'support'])) {
             return response()->json(['success' => false, 'message' => '无权操作'], 403);
         }
 

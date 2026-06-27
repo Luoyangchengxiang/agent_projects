@@ -33,7 +33,7 @@ describe('authService', () => {
       const result = await authService.login('test@test.com', 'password123')
 
       expect(request.post).toHaveBeenCalledWith('/auth/login', {
-        email: 'test@test.com',
+        login: 'test@test.com',
         password: 'password123',
       })
       expect(result.user).toEqual(mockRes.data.user)

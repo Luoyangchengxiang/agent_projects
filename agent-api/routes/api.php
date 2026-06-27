@@ -24,6 +24,9 @@ Route::prefix('auth')->group(function () {
     Route::post('/register', [App\Http\Controllers\Api\AuthController::class, 'register']);
 });
 
+// ==================== 验证码路由（无需登录） ====================
+Route::get('/captcha', [App\Http\Controllers\Api\CaptchaController::class, 'generate']);
+
 // ==================== 需要认证的路由 ====================
 Route::middleware('auth:sanctum')->group(function () {
 
@@ -32,6 +35,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', [App\Http\Controllers\Api\AuthController::class, 'me']);
         Route::post('/logout', [App\Http\Controllers\Api\AuthController::class, 'logout']);
         Route::put('/mascot', [App\Http\Controllers\Api\AuthController::class, 'updateMascot']);
+        Route::put('/nickname', [App\Http\Controllers\Api\AuthController::class, 'updateNickname']);
         Route::put('/password', [App\Http\Controllers\Api\AuthController::class, 'updatePassword']);
     });
 

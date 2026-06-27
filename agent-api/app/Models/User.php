@@ -13,6 +13,7 @@ class User extends Authenticatable
 
     protected $fillable = [
         'name',
+        'nickname',
         'email',
         'password',
         'role',
@@ -60,6 +61,14 @@ class User extends Authenticatable
     public function isUser(): bool
     {
         return $this->role === 'user';
+    }
+
+    /**
+     * 是否为客服人员
+     */
+    public function isSupport(): bool
+    {
+        return $this->role === 'support';
     }
 
     /**
@@ -124,6 +133,7 @@ class User extends Authenticatable
     {
         return match($this->role) {
             'admin' => '管理员',
+            'support' => '客服人员',
             'vip' => 'VIP 用户',
             'user' => '普通用户',
             default => '未知'

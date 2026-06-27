@@ -18,15 +18,16 @@ import './login.css'
  */
 const LoginPage = forwardRef(function LoginPage({
   brandName = 'YourBrand',
-  title = 'Welcome back!',
-  subtitle = 'Please enter your details',
+  title = '欢迎回来！',
+  subtitle = '请输入您的账号信息登录系统',
   emailPlaceholder = '程序员阿甘(接单中)',
   primaryColor = '#4f46e5',
   showGoogleLogin = true,
   onSubmit,
+  footerLink,
 }, ref) {
   const [showPassword, setShowPassword] = useState(false)
-  const [email, setEmail] = useState('')
+  const [login, setLogin] = useState('')  // 用户名或邮箱
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
@@ -42,7 +43,7 @@ const LoginPage = forwardRef(function LoginPage({
   const handleSubmit = (e) => {
     e.preventDefault()
     setErrorMsg('')
-    onSubmit?.({ email, password, remember })
+    onSubmit?.({ login, password, remember })
   }
 
   return (
@@ -61,9 +62,9 @@ const LoginPage = forwardRef(function LoginPage({
           />
         </div>
         <div className="login-footer-links">
-          <a href="#">Privacy Policy</a>
-          <a href="#">Terms of Service</a>
-          <a href="#">Contact</a>
+          <a href="#">隐私政策</a>
+          <a href="#">服务条款</a>
+          <a href="#">联系我们</a>
         </div>
         {/* 装饰元素 */}
         <div className="login-deco-grid" />
@@ -87,13 +88,13 @@ const LoginPage = forwardRef(function LoginPage({
 
           <form onSubmit={handleSubmit} className="login-form">
             <div className="login-field">
-              <label htmlFor="login-email">用户名 / 账号</label>
+              <label htmlFor="login-input">用户名 / 邮箱</label>
               <input
-                id="login-email"
+                id="login-input"
                 type="text"
-                placeholder={emailPlaceholder}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                placeholder="请输入用户名或邮箱"
+                value={login}
+                onChange={(e) => setLogin(e.target.value)}
                 onFocus={() => setIsTyping(true)}
                 onBlur={() => setIsTyping(false)}
                 autoComplete="username"
@@ -102,12 +103,12 @@ const LoginPage = forwardRef(function LoginPage({
             </div>
 
             <div className="login-field">
-              <label htmlFor="login-password">Password</label>
+              <label htmlFor="login-password">密码</label>
               <div className="login-password-wrap">
                 <input
                   id="login-password"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
+                  placeholder="请输入密码"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -129,9 +130,9 @@ const LoginPage = forwardRef(function LoginPage({
                   checked={remember}
                   onChange={(e) => setRemember(e.target.checked)}
                 />
-                Remember for 30 days
+                记住30天
               </label>
-              <a href="#" className="login-forgot">Forgot password?</a>
+              <a href="#" className="login-forgot">忘记密码？</a>
             </div>
 
             {errorMsg && <div className="login-error-msg">{errorMsg}</div>}
@@ -142,18 +143,18 @@ const LoginPage = forwardRef(function LoginPage({
               disabled={loading}
               style={{ background: primaryColor }}
             >
-              {loading ? 'Signing in...' : 'Log in'}
+              {loading ? '登录中...' : '登录'}
             </button>
           </form>
 
           {showGoogleLogin && (
             <button type="button" className="login-btn-google">
-              <Mail size={20} /> Log in with Google
+              <Mail size={20} /> 使用Google登录
             </button>
           )}
 
           <p className="login-signup-link">
-            Don't have an account? <a href="#">Sign Up</a>
+            {footerLink || <a href="#">注册</a>}
           </p>
         </div>
       </div>

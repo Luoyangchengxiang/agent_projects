@@ -26,21 +26,18 @@ function Header() {
   // 用户菜单
   const userMenuItems = [
     // 管理员：随时可更换看板娘
-    // 普通用户/VIP：已选定后不可更换
-    ...(isAdmin || !mascotSelected ? [{
+    // 普通用户：已选定后直接隐藏选项
+    ...(isAdmin ? [{
       key: 'change-mascot',
       icon: <SmileOutlined />,
-      label: isAdmin ? '更换看板娘' : '选择看板娘',
-      onClick: () => {
-        if (mascotSelected) resetMascot()
-        navigate('/select-mascot')
-      }
-    }] : [{
-      key: 'change-mascot-disabled',
-      icon: <SmileOutlined style={{ opacity: 0.4 }} />,
-      label: <span style={{ color: '#6b7280' }}>看板娘已锁定（联系管理员更换）</span>,
-      disabled: true,
-    }]),
+      label: '更换看板娘',
+      onClick: () => navigate('/select-mascot')
+    }] : (!mascotSelected ? [{
+      key: 'select-mascot',
+      icon: <SmileOutlined />,
+      label: '选择看板娘',
+      onClick: () => navigate('/select-mascot')
+    }] : [])),
     {
       key: 'settings',
       icon: <SettingOutlined />,
@@ -62,8 +59,8 @@ function Header() {
   ]
 
   // 角色标签颜色
-  const roleColors = { admin: 'gold', user: 'blue', vip: 'purple' }
-  const roleLabels = { admin: '管理员', user: '用户', vip: 'VIP' }
+  const roleColors = { admin: 'gold', support: 'cyan', user: 'blue', vip: 'purple' }
+  const roleLabels = { admin: '管理员', support: '客服', user: '用户', vip: 'VIP' }
 
   return (
     <>

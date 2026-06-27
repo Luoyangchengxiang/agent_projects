@@ -63,7 +63,7 @@ class PermissionController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'role' => 'required|in:user,vip,admin',
+            'role' => 'required|in:user,vip,support,admin',
         ]);
 
         if ($validator->fails()) {

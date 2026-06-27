@@ -30,8 +30,9 @@ const request = axios.create(config)
 
 request.interceptors.request.use(
   (config) => {
-    // 白名单路径不附加Token
-    const isWhiteListed = WHITE_LIST.some((path) => config.url?.includes(path))
+    // 白名单路径不附加Token（使用路径前缀精确匹配）
+    const url = config.url || ''
+    const isWhiteListed = url.startsWith('/auth/login') || url.startsWith('/auth/register')
     if (!isWhiteListed) {
       const token = tokenManager.getToken()
       if (token) {
@@ -61,7 +62,8 @@ request.interceptors.response.use(
     if (data && data.success === false) {
       const error = new Error(data.message || '请求失败')
       error.code = data.error_type || 'BUSINESS_ERROR'
-      error.errors = data.errors || {}
+      // 保留后端返回的详细错误信息
+      error.errors = data.errors || null
       return Promise.reject(error)
     }
 
@@ -77,18 +79,33 @@ request.interceptors.response.use(
     }
 
     // Token过期 → 清除认证信息并跳转登录
+    // 注意：登录接口返回的 401 不应跳转，只显示后端错误信息
     if (response && response.status === 401) {
-      tokenManager.clearAll()
-      // 跳转到登录页
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login'
+      const data = response.data
+      const isLoginRequest = error.config?.url?.includes('/auth/login')
+
+      if (!isLoginRequest) {
+        // 非登录请求的 401，清除认证并跳转
+        tokenManager.clearAll()
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login'
+        }
       }
-      return Promise.reject(new Error('未授权，请先登录'))
+
+      // 返回后端真实错误信息
+      const message = data?.message || '认证失败'
+      const err = new Error(message)
+      err.code = data?.error_type || 'AUTH_ERROR'
+      return Promise.reject(err)
     }
 
-    // 其他错误
-    const message = response?.data?.message || error.message || '请求失败'
-    return Promise.reject(new Error(message))
+    // 其他错误（包括 422 验证错误）
+    const data = response?.data
+    const err = new Error(data?.message || error.message || '请求失败')
+    err.code = data?.error_type || 'BUSINESS_ERROR'
+    // 保留后端返回的详细错误信息
+    err.errors = data?.errors || null
+    return Promise.reject(err)
   }
 )
 

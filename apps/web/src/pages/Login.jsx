@@ -19,7 +19,7 @@ export default function Login() {
     loginRef.current?.setError('')
 
     try {
-      await login(payload.email, payload.password)
+      await login(payload.login, payload.password)
 
       // 登录成功，检查是否已选择看板娘
       const redirect = searchParams.get('redirect')
@@ -48,7 +48,11 @@ export default function Login() {
       showGoogleLogin={false}
       emailPlaceholder="邮箱 或 admin（本地IP）"
       onSubmit={handleLogin}
-      footerLink={<Link to="/register">注册新账号</Link>}
+      footerLink={
+        <span>
+          没有账号？<Link to="/register">注册新账号</Link>
+        </span>
+      }
     />
   )
 }

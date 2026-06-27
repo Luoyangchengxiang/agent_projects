@@ -16,11 +16,11 @@ const useAuthStore = create((set, get) => ({
   isInitialized: false, // 新增：标记是否已初始化
   error: null,
 
-  // 登录
-  login: async (email, password) => {
+  // 登录（支持用户名或邮箱）
+  login: async (login, password) => {
     set({ isLoading: true, error: null })
     try {
-      const result = await authService.login(email, password)
+      const result = await authService.login(login, password)
       console.log('[AuthStore] 登录成功:', result)
       set({
         user: result.user,
@@ -31,6 +31,9 @@ const useAuthStore = create((set, get) => ({
       // 同步看板娘选择到 mascotStore
       if (result.user?.mascot_model_id) {
         useMascotStore.getState().syncFromUser(result.user.mascot_model_id)
+      } else {
+        // 新用户或未选择看板娘，清除 localStorage 中的旧缓存
+        useMascotStore.getState().reset()
       }
       return result
     } catch (error) {
@@ -125,6 +128,9 @@ const useAuthStore = create((set, get) => ({
         // 同步看板娘选择
         if (user?.mascot_model_id) {
           useMascotStore.getState().syncFromUser(user.mascot_model_id)
+        } else {
+          // 用户未选择看板娘，清除旧缓存
+          useMascotStore.getState().reset()
         }
       } catch (error) {
         console.error('[AuthStore] 刷新用户信息失败:', error)

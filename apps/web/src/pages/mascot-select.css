@@ -90,6 +90,16 @@
   box-shadow: 0 0 15px rgba(0, 212, 255, 0.1);
 }
 
+.mascot-select-item--disabled {
+  opacity: 0.5;
+  cursor: not-allowed !important;
+}
+
+.mascot-select-item--disabled:hover {
+  border-color: transparent;
+  background: var(--bg-card, #24272e);
+}
+
 .mascot-select-item-emoji {
   font-size: 32px;
   line-height: 1;

@@ -85,7 +85,7 @@ function Sidebar() {
           <div className="flex-1 min-w-0">
             <p className="text-sm text-primary truncate">{user?.name || '用户'}</p>
             <p className="text-xs text-muted truncate">
-              {user?.role === 'admin' ? '管理员' : user?.role === 'vip' ? 'VIP 用户' : '普通用户'}
+              {user?.role === 'admin' ? '管理员' : user?.role === 'support' ? '客服人员' : user?.role === 'vip' ? 'VIP 用户' : '普通用户'}
             </p>
           </div>
         </div>
