@@ -3,12 +3,12 @@
  * 独立模块，后续可接入看板娘环状菜单
  */
 import { useState, useRef, useEffect } from 'react'
-import { SendOutlined, CloseOutlined, RobotOutlined, UserOutlined, CustomerServiceOutlined } from '@ant-design/icons'
+import { SendOutlined, CloseOutlined, RobotOutlined, UserOutlined, CustomerServiceOutlined, ReloadOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
 import useChatStore from '../../stores/chatStore'
 import './chat.css'
 
 export default function ChatPanel({ embedded = false, onClose }) {
-  const { conversation, messages, isLoading, isSending, sendMessage, initConversation } = useChatStore()
+  const { conversation, messages, isLoading, isSending, sendMessage, initConversation, retryMessage } = useChatStore()
   const [input, setInput] = useState('')
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
@@ -28,6 +28,13 @@ export default function ChatPanel({ embedded = false, onClose }) {
     const msg = input
     setInput('')
     await sendMessage(msg)
+    inputRef.current?.focus()
+  }
+
+  // 重试失败的消息
+  const handleRetry = async (content) => {
+    if (isSending) return
+    await retryMessage(content)
     inputRef.current?.focus()
   }
 
@@ -89,7 +96,7 @@ export default function ChatPanel({ embedded = false, onClose }) {
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`chat-message chat-message--${msg.sender_type} ${msg._sending ? 'chat-message--sending' : ''}`}
+            className={`chat-message chat-message--${msg.sender_type} ${msg._sending ? 'chat-message--sending' : ''} ${msg._failed ? 'chat-message--failed' : ''}`}
           >
             {msg.sender_type !== 'user' && msg.sender_type !== 'system' && (
               <div className="chat-avatar">
@@ -105,6 +112,14 @@ export default function ChatPanel({ embedded = false, onClose }) {
                   <div className="chat-system-msg">{msg.content}</div>
                 ) : (
                   <span>{msg.content}</span>
+                )}
+                {msg._failed && (
+                  <div className="chat-msg-failed">
+                    <ExclamationCircleOutlined /> 发送失败
+                    <button className="chat-retry-btn" onClick={() => handleRetry(msg.content)}>
+                      <ReloadOutlined /> 重发
+                    </button>
+                  </div>
                 )}
               </div>
               <span className="chat-time">

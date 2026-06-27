@@ -306,6 +306,41 @@
   cursor: not-allowed;
 }
 
+/* 发送失败消息 */
+.chat-msg-failed {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 12px;
+  color: #ff4d4f;
+}
+
+.chat-retry-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 212, 255, 0.4);
+  background: rgba(0, 212, 255, 0.1);
+  color: #00d4ff;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.chat-retry-btn:hover {
+  background: rgba(0, 212, 255, 0.2);
+  border-color: #00d4ff;
+}
+
+.chat-message--failed .chat-bubble {
+  border: 1px solid rgba(255, 77, 79, 0.3);
+}
+
 /* 响应式 */
 @media (max-width: 480px) {
   .chat-panel--float {

@@ -75,7 +75,7 @@ PROMPT;
                 $messages
             );
 
-            $response = Http::timeout(30)->post("{$this->baseUrl}/api/chat", [
+            $response = Http::timeout(120)->post("{$this->baseUrl}/api/chat", [
                 'model' => $this->model,
                 'messages' => $fullMessages,
                 'stream' => false,

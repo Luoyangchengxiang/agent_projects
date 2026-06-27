@@ -18,6 +18,8 @@
 ### 🐛 Bug 修复
 
 - 修复客服聊天 API 权限过严：创建对话、发消息等用户功能被错误限制为仅 admin/support 可用
+- 修复 Ollama 超时太短（30s→120s）导致 AI 回复失败
+- 修复发送失败时用户消息丢失：失败消息保留在聊天列表，支持一键重发
 - 修复后端权限中间件未覆盖 error-logs/reports/cronjobs 路由（前端限制可被绕过）
 - 修复 /permissions/me 自查接口被错误锁在 admin-only 中间件下
 - 修复 CHANGELOG 错误日志权限表与代码不一致
