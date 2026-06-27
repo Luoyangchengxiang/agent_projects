@@ -155,4 +155,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/{versionUpdate}', [App\Http\Controllers\VersionUpdateController::class, 'update']);
         Route::delete('/{versionUpdate}', [App\Http\Controllers\VersionUpdateController::class, 'destroy']);
     });
+
+    // ==================== 系统设置 ====================
+    Route::prefix('settings')->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\SettingController::class, 'index']);
+        Route::post('/', [App\Http\Controllers\Api\SettingController::class, 'update']);
+        Route::get('/{key}', [App\Http\Controllers\Api\SettingController::class, 'show']);
+    });
 });

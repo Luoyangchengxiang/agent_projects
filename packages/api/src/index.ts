@@ -234,4 +234,22 @@ export const permissionApi = {
   }
 }
 
+// 系统设置相关API
+export const settingsApi = {
+  // 获取所有设置（按组）
+  getAll(group?: string): Promise<ApiResponse<Record<string, Record<string, any>>>> {
+    return api.get('/settings', { params: group ? { group } : {} })
+  },
+
+  // 获取单个设置
+  get(key: string): Promise<ApiResponse<{ key: string; value: any; type: string; group: string; description: string }>> {
+    return api.get(`/settings/${key}`)
+  },
+
+  // 批量更新设置
+  update(group: string, settings: Record<string, any>): Promise<ApiResponse<void>> {
+    return api.post('/settings', { group, settings })
+  }
+}
+
 export default api
