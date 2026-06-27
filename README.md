@@ -118,7 +118,7 @@ agent-monitor/
 # 前端测试 (180 个用例)
 cd apps/web && pnpm test
 
-# 后端测试 (34 个用例)
+# 后端测试 (77 个用例)
 cd agent-api && vendor/bin/phpunit
 ```
 

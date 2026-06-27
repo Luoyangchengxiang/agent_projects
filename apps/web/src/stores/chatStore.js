@@ -79,26 +79,25 @@ const useChatStore = create((set, get) => ({
         return { messages: msgs, isSending: false, conversation: { ...s.conversation, mode: result.mode } }
       })
     } catch (error) {
-      // 发送失败：保留用户消息在输入框，标记临时消息为失败
+      // 发送失败：标记临时消息为失败，保留显示
       set((s) => ({
         messages: s.messages.map((m) =>
           m.id === tempUserMsg.id ? { ...m, _failed: true } : m
         ),
         isSending: false,
         error: error.message,
-        _lastFailedContent: content.trim(),
       }))
     }
   },
 
-   // 重试失败的消息
-  retryMessage: async (content) => {
+  // 重试失败的消息（只移除当前要重试的那条，不影响其他失败消息）
+  retryMessage: async (failedMsgId, content) => {
     const { conversation, isSending } = get()
     if (!conversation || !content.trim() || isSending) return
 
-    // 移除之前失败的消息
+    // 只移除当前要重试的失败消息
     set((s) => ({
-      messages: s.messages.filter((m) => !m._failed),
+      messages: s.messages.filter((m) => m.id !== failedMsgId),
       error: null,
     }))
 
@@ -106,7 +105,7 @@ const useChatStore = create((set, get) => ({
     await get().sendMessage(content)
   },
 
- // 清空状态（退出登录时调用）
+  // 清空状态（退出登录时调用）
   reset: () => set({
     conversation: null,
     messages: [],

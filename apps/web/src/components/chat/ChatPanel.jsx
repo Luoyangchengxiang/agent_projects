@@ -32,9 +32,9 @@ export default function ChatPanel({ embedded = false, onClose }) {
   }
 
   // 重试失败的消息
-  const handleRetry = async (content) => {
+  const handleRetry = async (msgId, content) => {
     if (isSending) return
-    await retryMessage(content)
+    await retryMessage(msgId, content)
     inputRef.current?.focus()
   }
 
@@ -116,7 +116,7 @@ export default function ChatPanel({ embedded = false, onClose }) {
                 {msg._failed && (
                   <div className="chat-msg-failed">
                     <ExclamationCircleOutlined /> 发送失败
-                    <button className="chat-retry-btn" onClick={() => handleRetry(msg.content)}>
+                    <button className="chat-retry-btn" onClick={() => handleRetry(msg.id, msg.content)}>
                       <ReloadOutlined /> 重发
                     </button>
                   </div>
