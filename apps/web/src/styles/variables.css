@@ -116,3 +116,75 @@ input, textarea, select {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* ========== Ant Design 全局暗色覆盖 ========== */
+/* message 提示框（静态方法调用时不受 ConfigProvider 控制） */
+.ant-message .ant-message-notice .ant-message-notice-content {
+  background: #2a2d35 !important;
+  color: #e5e7eb !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4) !important;
+}
+
+.ant-message .ant-message-notice .ant-message-custom-content {
+  color: #e5e7eb !important;
+}
+
+.ant-message .ant-message-notice .anticon {
+  color: inherit !important;
+}
+
+/* notification 通知框 */
+.ant-notification .ant-notification-notice {
+  background: #2a2d35 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4) !important;
+}
+
+.ant-notification .ant-notification-notice-message,
+.ant-notification .ant-notification-notice-description {
+  color: #e5e7eb !important;
+}
+
+/* Modal.confirm 确认框 */
+.ant-modal-confirm .ant-modal-content {
+  background: #24272e !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.ant-modal-confirm .ant-modal-confirm-title,
+.ant-modal-confirm .ant-modal-confirm-content {
+  color: #e5e7eb !important;
+}
+
+/* 全局 ant-modal 暗色覆盖 */
+.ant-modal .ant-modal-content {
+  background: #24272e !important;
+}
+
+.ant-modal .ant-modal-header {
+  background: #24272e !important;
+}
+
+.ant-modal .ant-modal-title {
+  color: #e5e7eb !important;
+}
+
+.ant-modal .ant-modal-close {
+  color: #9ca3af !important;
+}
+
+.ant-modal .ant-modal-close:hover {
+  color: #e5e7eb !important;
+}
+
+/* Popconfirm 暗色覆盖 */
+.ant-popconfirm .ant-popconfirm-message-title {
+  color: #e5e7eb !important;
+}
+
+.ant-popconfirm .ant-popconfirm-description {
+  color: #9ca3af !important;
+}

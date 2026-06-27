@@ -12,7 +12,7 @@ TASK_PREFIX="daily_inspection"
 # 获取今天的日期
 TODAY=$(date +%Y-%m-%d)
 TODAY_COMPACT=$(date +%Y%m%d)
-CREATED_AT="${TODAY}T09:00:00+08:00"
+CREATED_AT="${TODAY}T01:00:00Z"
 
 # 报告目录
 REPORT_DIR="$HOME/local-ai/agents/开店团队/报告"
