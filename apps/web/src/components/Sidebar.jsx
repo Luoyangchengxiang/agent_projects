@@ -16,17 +16,18 @@ import {
 import { Badge } from 'antd'
 import useAuthStore from '../stores/authStore'
 
+// 菜单配置：roles 定义哪些角色可以访问，为空则所有人可见
 const menuItems = [
-  { path: '/', icon: <DashboardOutlined />, label: '仪表盘' },
-  { path: '/agents', icon: <RobotOutlined />, label: 'Agent列表' },
-  { path: '/logs', icon: <FileTextOutlined />, label: '执行日志' },
-  { path: '/errors', icon: <BugOutlined />, label: '错误日志' },
-  { path: '/reports', icon: <BarChartOutlined />, label: '数据报告' },
-  { path: '/graph', icon: <ApartmentOutlined />, label: '知识图谱' },
-  { path: '/cronjobs', icon: <ClockCircleOutlined />, label: '定时任务' },
-  { path: '/chat', icon: <CustomerServiceOutlined />, label: '客服管理' },
-  { path: '/permissions', icon: <TeamOutlined />, label: '权限管理', adminOnly: true },
-  { path: '/settings', icon: <SettingOutlined />, label: '设置' },
+  { path: '/', icon: <DashboardOutlined />, label: '仪表盘', roles: [] },
+  { path: '/agents', icon: <RobotOutlined />, label: 'Agent列表', roles: [] },
+  { path: '/logs', icon: <FileTextOutlined />, label: '执行日志', roles: [] },
+  { path: '/errors', icon: <BugOutlined />, label: '错误日志', roles: [] },
+  { path: '/reports', icon: <BarChartOutlined />, label: '数据报告', roles: ['admin', 'vip'] },
+  { path: '/graph', icon: <ApartmentOutlined />, label: '知识图谱', roles: [] },
+  { path: '/cronjobs', icon: <ClockCircleOutlined />, label: '定时任务', roles: ['admin'] },
+  { path: '/chat', icon: <CustomerServiceOutlined />, label: '客服管理', roles: ['admin', 'support'] },
+  { path: '/permissions', icon: <TeamOutlined />, label: '权限管理', roles: ['admin'] },
+  { path: '/settings', icon: <SettingOutlined />, label: '设置', roles: [] },
 ]
 
 function Sidebar() {
@@ -40,10 +41,12 @@ function Sidebar() {
 
   // 根据用户角色过滤菜单
   const filteredMenuItems = menuItems.filter(item => {
-    if (item.adminOnly) {
-      return user?.role === 'admin'
+    // roles 为空数组表示所有人可见
+    if (!item.roles || item.roles.length === 0) {
+      return true
     }
-    return true
+    // 检查用户角色是否在允许列表中
+    return item.roles.includes(user?.role)
   })
 
   return (

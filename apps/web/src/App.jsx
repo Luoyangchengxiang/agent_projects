@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom'
 import MainLayout from './components/MainLayout'
 import ErrorBoundary from './components/ErrorBoundary'
 import ProtectedRoute from './components/ProtectedRoute'
+import RoleRoute from './components/RoleRoute'
 import useAuthStore from './stores/authStore'
 import useMascotStore from './stores/mascotStore'
 
@@ -114,18 +115,26 @@ function App({ onReady }) {
                 <MainLayout />
               </ProtectedRoute>
             }
-          >
-            <Route index element={<Dashboard />} />
-            <Route path="agents" element={<AgentList />} />
-            <Route path="logs" element={<ExecutionLogs />} />
-            <Route path="errors" element={<ErrorLogs />} />
-            <Route path="reports" element={<Reports />} />
-            <Route path="graph" element={<KnowledgeGraph />} />
-            <Route path="cronjobs" element={<CronJobs />} />
-            <Route path="chat" element={<ChatAdmin />} />
-            <Route path="permissions" element={<PermissionManagement />} />
-            <Route path="settings" element={<Settings />} />
-          </Route>
+            <Route path="/" element={<MainLayout />}>
+              <Route index element={<Dashboard />} />
+              <Route path="agents" element={<AgentList />} />
+              <Route path="logs" element={<ExecutionLogs />} />
+              <Route path="errors" element={<ErrorLogs />} />
+              <Route path="reports" element={
+                <RoleRoute roles={['admin', 'vip']}><Reports /></RoleRoute>
+              } />
+              <Route path="graph" element={<KnowledgeGraph />} />
+              <Route path="cronjobs" element={
+                <RoleRoute roles={['admin']}><CronJobs /></RoleRoute>
+              } />
+              <Route path="chat" element={
+                <RoleRoute roles={['admin', 'support']}><ChatAdmin /></RoleRoute>
+              } />
+              <Route path="permissions" element={
+                <RoleRoute roles={['admin']}><PermissionManagement /></RoleRoute>
+              } />
+              <Route path="settings" element={<Settings />} />
+            </Route>
         </Routes>
       </Suspense>
     </ErrorBoundary>

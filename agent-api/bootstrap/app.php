@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'ip.detect' => App\Http\Middleware\IpDetection::class,
             'rate.limit' => App\Http\Middleware\ApiRateLimit::class,
+            'role' => App\Http\Middleware\RoleMiddleware::class,
             'auth:sanctum' => \Laravel\Sanctum\Http\Middleware\AuthenticateWithSanctum::class,
         ]);
 

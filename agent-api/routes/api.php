@@ -82,8 +82,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{alertRule}/check', [App\Http\Controllers\Api\AlertController::class, 'checkRule']);
     });
 
-    // ==================== 客服系统 ====================
-    Route::prefix('chat')->group(function () {
+    // ==================== 客服系统（管理员、客服）====================
+    Route::prefix('chat')->middleware('role:admin,support')->group(function () {
         // 对话管理
         Route::post('/conversations', [App\Http\Controllers\Api\ChatController::class, 'createConversation']);
         Route::get('/conversations', [App\Http\Controllers\Api\ChatController::class, 'conversations']);
@@ -102,8 +102,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/status', [App\Http\Controllers\Api\ChatController::class, 'status']);
     });
 
-    // ==================== 权限管理 ====================
-    Route::prefix('permissions')->group(function () {
+    // ==================== 权限管理（仅管理员）====================
+    Route::prefix('permissions')->middleware('role:admin')->group(function () {
         Route::get('/me', [App\Http\Controllers\Api\PermissionController::class, 'me']);
         Route::get('/users', [App\Http\Controllers\Api\PermissionController::class, 'index']);
         Route::put('/users/{id}/role', [App\Http\Controllers\Api\PermissionController::class, 'updateRole']);
