@@ -21,13 +21,12 @@ class BuildKnowledgeBase extends Command
 
     public function handle(): int
     {
-        // 项目根目录（agent-api 的上级）
-        $basePath = dirname(base_path());
+        $projectRoot = dirname(base_path());
         $docsDirs = [
-            $basePath . '/docs-site',
-            $basePath . '/docs',
-            $basePath,
+            $projectRoot . '/docs-site',
+            $projectRoot . '/docs',
         ];
+        $rootFiles = [$projectRoot . '/README.md'];
 
         $this->info('🧠 开始构建知识库...');
         $this->newLine();
@@ -37,20 +36,26 @@ class BuildKnowledgeBase extends Command
         $chunks = [];
         foreach ($docsDirs as $dir) {
             if (!is_dir($dir)) continue;
-            $found = $this->scanDocs($dir, $basePath);
-            $chunks = array_merge($chunks, $found);
+            $chunks = array_merge($chunks, $this->scanDocs($dir, $projectRoot));
+        }
+        foreach ($rootFiles as $file) {
+            if (file_exists($file)) {
+                $relativePath = str_replace($projectRoot . '/', '', $file);
+                $content = file_get_contents($file);
+                $chunks = array_merge($chunks, $this->splitByHeading($content, $relativePath));
+            }
         }
         $this->info("   找到 " . count($chunks) . " 个文档块");
         $this->newLine();
 
-        // 2. 生成向量
+        // 2. 生成向量（小批次 + 重试）
         $this->info("🔢 生成向量（使用 {$this->embeddingModel}）...");
         $vectors = $this->generateVectors($chunks);
         $this->newLine();
 
         // 3. 保存
         $outputPath = storage_path('app/knowledge-base.json');
-        $this->saveKnowledgeBase($vectors, count($chunks) - count($vectors), $outputPath);
+        $this->saveKnowledgeBase($vectors, $outputPath);
 
         $this->newLine();
         $this->info("✅ 知识库构建完成！");
@@ -64,7 +69,7 @@ class BuildKnowledgeBase extends Command
     private function scanDocs(string $dir, string $basePath): array
     {
         $chunks = [];
-        $exclude = ['node_modules', 'vendor', '.git', 'CHANGELOG.md'];
+        $exclude = ['node_modules', 'vendor', '.git'];
 
         $iterator = new \RecursiveIteratorIterator(
             new \RecursiveDirectoryIterator($dir, \RecursiveDirectoryIterator::SKIP_DOTS)
@@ -72,7 +77,6 @@ class BuildKnowledgeBase extends Command
 
         foreach ($iterator as $file) {
             if ($file->getExtension() !== 'md') continue;
-
             $relativePath = str_replace($basePath . '/', '', $file->getPathname());
 
             $skip = false;
@@ -94,11 +98,11 @@ class BuildKnowledgeBase extends Command
         $lines = explode("\n", $content);
         $currentHeading = '';
         $currentText = '';
-        $maxChunkSize = 500;
+        $maxChunkSize = 1000;
 
         foreach ($lines as $line) {
             if (preg_match('/^(#{2,3})\s+(.+)/', $line, $m)) {
-                if (trim($currentText)) {
+                if (trim($currentText) && mb_strlen($currentText) > 30) {
                     $chunks[] = [
                         'source' => $source,
                         'heading' => $currentHeading ?: '概述',
@@ -110,17 +114,19 @@ class BuildKnowledgeBase extends Command
             } else {
                 $currentText .= $line . "\n";
                 if (mb_strlen($currentText) > $maxChunkSize && trim($line) === '') {
-                    $chunks[] = [
-                        'source' => $source,
-                        'heading' => $currentHeading ?: '概述',
-                        'text' => trim($currentText),
-                    ];
+                    if (mb_strlen(trim($currentText)) > 30) {
+                        $chunks[] = [
+                            'source' => $source,
+                            'heading' => $currentHeading ?: '概述',
+                            'text' => trim($currentText),
+                        ];
+                    }
                     $currentText = '';
                 }
             }
         }
 
-        if (trim($currentText)) {
+        if (trim($currentText) && mb_strlen($currentText) > 30) {
             $chunks[] = [
                 'source' => $source,
                 'heading' => $currentHeading ?: '概述',
@@ -128,56 +134,63 @@ class BuildKnowledgeBase extends Command
             ];
         }
 
-        return array_values(array_filter($chunks, fn($c) => mb_strlen($c['text']) > 20));
+        return $chunks;
     }
 
     private function generateVectors(array $chunks): array
     {
         $vectors = [];
-        $batchSize = 10;
+        $batchSize = 5; // 小批次，避免超时
         $totalBatches = ceil(count($chunks) / $batchSize);
-        $failed = 0;
+        $maxRetries = 2;
 
         for ($batch = 0; $batch < $totalBatches; $batch++) {
             $start = $batch * $batchSize;
             $batchChunks = array_slice($chunks, $start, $batchSize);
             $texts = array_map(fn($c) => $c['text'], $batchChunks);
 
-            try {
-                $response = Http::timeout(60)->post("{$this->ollamaUrl}/api/embed", [
-                    'model' => $this->embeddingModel,
-                    'input' => $texts,
-                ]);
+            $success = false;
+            for ($retry = 0; $retry <= $maxRetries; $retry++) {
+                try {
+                    $response = Http::timeout(180)->post("{$this->ollamaUrl}/api/embed", [
+                        'model' => $this->embeddingModel,
+                        'input' => $texts,
+                    ]);
 
-                if ($response->successful()) {
-                    $embeddings = $response->json('embeddings', []);
-                    foreach ($embeddings as $i => $embedding) {
-                        $idx = $start + $i;
-                        if (isset($chunks[$idx])) {
-                            $vectors[] = [
-                                'id' => $idx,
-                                'source' => $chunks[$idx]['source'],
-                                'heading' => $chunks[$idx]['heading'],
-                                'text' => $chunks[$idx]['text'],
-                                'embedding' => $embedding,
-                            ];
+                    if ($response->successful()) {
+                        $embeddings = $response->json('embeddings', []);
+                        foreach ($embeddings as $i => $embedding) {
+                            $idx = $start + $i;
+                            if (isset($chunks[$idx])) {
+                                $vectors[] = [
+                                    'id' => $idx,
+                                    'source' => $chunks[$idx]['source'],
+                                    'heading' => $chunks[$idx]['heading'],
+                                    'text' => $chunks[$idx]['text'],
+                                    'embedding' => $embedding,
+                                ];
+                            }
                         }
+                        $this->info("   批次 " . ($batch + 1) . "/{$totalBatches} ✓ (" . count($embeddings) . " 个向量)");
+                        $success = true;
+                        break;
+                    } else {
+                        $this->warn("   批次 " . ($batch + 1) . "/{$totalBatches} ✗ (HTTP {$response->status()})" . ($retry < $maxRetries ? " 重试..." : ""));
                     }
-                    $this->info("   批次 " . ($batch + 1) . "/{$totalBatches} ✓");
-                } else {
-                    $failed += count($batchChunks);
-                    $this->warn("   批次 " . ($batch + 1) . "/{$totalBatches} ✗ (HTTP {$response->status()})");
+                } catch (\Exception $e) {
+                    $this->warn("   批次 " . ($batch + 1) . "/{$totalBatches} ✗ ({$e->getMessage()})" . ($retry < $maxRetries ? " 重试..." : ""));
                 }
-            } catch (\Exception $e) {
-                $failed += count($batchChunks);
-                $this->warn("   批次 " . ($batch + 1) . "/{$totalBatches} ✗ ({$e->getMessage()})");
+            }
+
+            if (!$success) {
+                $this->error("   批次 " . ($batch + 1) . "/{$totalBatches} 最终失败，跳过");
             }
         }
 
         return $vectors;
     }
 
-    private function saveKnowledgeBase(array $vectors, int $failed, string $path): void
+    private function saveKnowledgeBase(array $vectors, string $path): void
     {
         $dir = dirname($path);
         if (!is_dir($dir)) mkdir($dir, 0755, true);

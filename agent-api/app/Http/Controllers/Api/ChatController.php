@@ -115,7 +115,7 @@ class ChatController extends Controller
         $conversation = Conversation::findOrFail($request->conversation_id);
 
         // 安全检查
-        if ($request->user()->role !== 'admin' && $conversation->user_id !== $request->user()->id) {
+        if (!in_array($request->user()->role, ['admin', 'support']) && $conversation->user_id !== $request->user()->id) {
             return response()->json(['success' => false, 'message' => '无权操作'], 403);
         }
 
