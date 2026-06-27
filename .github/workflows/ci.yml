@@ -1,14 +1,10 @@
-name: CI/CD Pipeline
+name: lint-and-test
 
 on:
   push:
     branches: [master]
   pull_request:
     branches: [master]
-
-env:
-  # 禁止自动升级到 Node.js 24（兼容 Node.js 20 actions）
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "false"
 
 jobs:
   lint-and-test:
@@ -30,16 +26,18 @@ jobs:
           - 5432:5432
 
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@v5
 
       # ========== 前端 ==========
       - name: Setup Node.js
-        uses: actions/setup-node@v4.4.0
+        uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '22'
 
-      - name: Install pnpm
-        run: corepack enable
+      - name: Enable corepack & install pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@latest --activate
 
       - name: Install frontend dependencies
         working-directory: apps/web
@@ -97,7 +95,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
 
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
