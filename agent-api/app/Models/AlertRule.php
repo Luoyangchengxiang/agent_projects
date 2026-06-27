@@ -15,7 +15,10 @@ class AlertRule extends Model
         'time_window_minutes',
         'is_enabled',
         'notify_method',
+        'notify_channels',
         'webhook_url',
+        'email_recipients',
+        'cooldown_minutes',
         'description',
         'last_triggered_at',
         'trigger_count',
@@ -26,6 +29,9 @@ class AlertRule extends Model
         'threshold_count' => 'integer',
         'time_window_minutes' => 'integer',
         'trigger_count' => 'integer',
+        'cooldown_minutes' => 'integer',
+        'notify_channels' => 'array',
+        'email_recipients' => 'array',
         'last_triggered_at' => 'datetime',
     ];
 
@@ -36,7 +42,6 @@ class AlertRule extends Model
 
     /**
      * 检查规则是否触发
-     * 返回 [triggered => bool, count => int, threshold => int]
      */
     public function check(): array
     {

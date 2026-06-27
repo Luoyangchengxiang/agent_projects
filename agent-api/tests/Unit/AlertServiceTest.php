@@ -5,8 +5,10 @@ namespace Tests\Unit\Services;
 use App\Models\AlertRule;
 use App\Models\ErrorLog;
 use App\Services\AlertService;
+use App\Services\NotificationService;
 use Tests\TestCase;
 use Illuminate\Support\Facades\Log;
+use Mockery;
 
 class AlertServiceTest extends TestCase
 {
@@ -16,7 +18,10 @@ class AlertServiceTest extends TestCase
     {
         parent::setUp();
 
-        $this->alertService = new AlertService();
+        $notificationMock = Mockery::mock(NotificationService::class);
+        $notificationMock->shouldReceive('sendAlert')->andReturn(['log' => ['success' => true]]);
+
+        $this->alertService = new AlertService($notificationMock);
 
         AlertRule::query()->delete();
         ErrorLog::query()->delete();
@@ -236,5 +241,11 @@ class AlertServiceTest extends TestCase
         $result = $this->alertService->checkRule($rule);
 
         $this->assertNull($result);
+    }
+
+    protected function tearDown(): void
+    {
+        Mockery::close();
+        parent::tearDown();
     }
 }

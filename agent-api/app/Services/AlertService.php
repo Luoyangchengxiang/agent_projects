@@ -3,14 +3,16 @@
 namespace App\Services;
 
 use App\Models\AlertRule;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class AlertService
 {
+    public function __construct(
+        private NotificationService $notification
+    ) {}
+
     /**
      * 检查所有启用的告警规则
-     * 返回触发的告警列表
      */
     public function checkAll(): array
     {
@@ -20,6 +22,11 @@ class AlertService
             $result = $rule->check();
 
             if ($result['triggered']) {
+                // 检查冷却时间
+                if ($this->isInCooldown($rule)) {
+                    continue;
+                }
+
                 $rule->recordTrigger();
                 $alert = [
                     'rule_id' => $rule->id,
@@ -52,6 +59,10 @@ class AlertService
         $result = $rule->check();
 
         if ($result['triggered']) {
+            if ($this->isInCooldown($rule)) {
+                return null;
+            }
+
             $rule->recordTrigger();
             $alert = [
                 'rule_id' => $rule->id,
@@ -72,42 +83,37 @@ class AlertService
     }
 
     /**
-     * 发送通知
+     * 检查是否在冷却期内
+     */
+    private function isInCooldown(AlertRule $rule): bool
+    {
+        if (!$rule->last_triggered_at) {
+            return false;
+        }
+
+        $cooldownMinutes = $rule->cooldown_minutes ?? 5;
+        return $rule->last_triggered_at->addMinutes($cooldownMinutes)->isFuture();
+    }
+
+    /**
+     * 发送通知（支持多渠道）
      */
     private function notify(AlertRule $rule, array $alert): void
     {
-        match ($rule->notify_method) {
-            'webhook' => $this->sendWebhook($rule, $alert),
-            default => $this->sendLog($rule, $alert),
-        };
-    }
+        // 获取通知渠道
+        $channels = $rule->notify_channels ?? [$rule->notify_method ?? 'log'];
 
-    /**
-     * 日志通知
-     */
-    private function sendLog(AlertRule $rule, array $alert): void
-    {
-        Log::warning("🚨 告警触发: {$rule->name}", $alert);
-    }
+        $options = [
+            'email_recipients' => $rule->email_recipients ?? [],
+            'webhook_url' => $rule->webhook_url ?? '',
+        ];
 
-    /**
-     * Webhook 通知
-     */
-    private function sendWebhook(AlertRule $rule, array $alert): void
-    {
-        if (!$rule->webhook_url) {
-            $this->sendLog($rule, $alert);
-            return;
-        }
+        $results = $this->notification->sendAlert($channels, $alert, $options);
 
-        try {
-            Http::timeout(5)->post($rule->webhook_url, [
-                'text' => "🚨 告警: {$rule->name}\n类型: {$alert['error_type']}\n数量: {$alert['count']}/{$alert['threshold']} ({$alert['window_minutes']}分钟内)",
-                'alert' => $alert,
-            ]);
-        } catch (\Exception $e) {
-            Log::error("Webhook通知失败: {$e->getMessage()}");
-            $this->sendLog($rule, $alert);
-        }
+        Log::info("告警通知发送完成", [
+            'rule_id' => $rule->id,
+            'channels' => array_keys($results),
+            'results' => $results,
+        ]);
     }
 }

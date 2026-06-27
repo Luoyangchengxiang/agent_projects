@@ -47,7 +47,12 @@ class AlertController extends Controller
             'time_window_minutes' => 'required|integer|min:1|max:1440',
             'is_enabled' => 'boolean',
             'notify_method' => 'in:log,webhook',
+            'notify_channels' => 'nullable|array',
+            'notify_channels.*' => 'in:log,email,wechat,dingtalk,feishu,webhook',
             'webhook_url' => 'nullable|url|max:500',
+            'email_recipients' => 'nullable|array',
+            'email_recipients.*' => 'email',
+            'cooldown_minutes' => 'nullable|integer|min:1|max:1440',
             'description' => 'nullable|string|max:500',
         ]);
 
@@ -84,7 +89,12 @@ class AlertController extends Controller
             'time_window_minutes' => 'integer|min:1|max:1440',
             'is_enabled' => 'boolean',
             'notify_method' => 'in:log,webhook',
+            'notify_channels' => 'nullable|array',
+            'notify_channels.*' => 'in:log,email,wechat,dingtalk,feishu,webhook',
             'webhook_url' => 'nullable|url|max:500',
+            'email_recipients' => 'nullable|array',
+            'email_recipients.*' => 'email',
+            'cooldown_minutes' => 'nullable|integer|min:1|max:1440',
             'description' => 'nullable|string|max:500',
         ]);
 
@@ -125,7 +135,7 @@ class AlertController extends Controller
                 'checked_at' => now()->toISOString(),
             ],
             'message' => count($alerts) > 0
-                ? "检查完成，触发 {count($alerts)} 条告警"
+                ? '检查完成，触发 ' . count($alerts) . ' 条告警'
                 : '检查完成，无告警触发',
         ]);
     }
