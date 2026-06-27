@@ -54,6 +54,18 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/error-logs/{errorLog}/resolve', [App\Http\Controllers\Api\ErrorLogController::class, 'resolve']);
     Route::apiResource('error-logs', App\Http\Controllers\Api\ErrorLogController::class)->only(['index', 'show', 'destroy']);
 
+    // ==================== 性能指标 ====================
+    Route::prefix('metrics')->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\MetricController::class, 'index']);
+        Route::post('/', [App\Http\Controllers\Api\MetricController::class, 'store']);
+        Route::post('/batch', [App\Http\Controllers\Api\MetricController::class, 'batchStore']);
+        Route::get('/names', [App\Http\Controllers\Api\MetricController::class, 'metricNames']);
+        Route::get('/{agentId}/stats', [App\Http\Controllers\Api\MetricController::class, 'stats']);
+        Route::get('/{agentId}/trend', [App\Http\Controllers\Api\MetricController::class, 'trend']);
+        Route::get('/{agentId}/overview', [App\Http\Controllers\Api\MetricController::class, 'overview']);
+        Route::delete('/', [App\Http\Controllers\Api\MetricController::class, 'destroy']);
+    });
+
     // ==================== 告警规则 ====================
     Route::prefix('alerts')->group(function () {
         Route::get('/', [App\Http\Controllers\Api\AlertController::class, 'index']);
