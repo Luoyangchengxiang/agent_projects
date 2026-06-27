@@ -188,24 +188,15 @@ class CronJobController extends Controller
 
     /**
      * 手动执行定时任务
-     * 注意：此处仅记录执行日志，实际任务执行需通过 Hermes cron 系统触发
      */
     public function run(CronJob $cronjob): JsonResponse
     {
-        // 记录执行日志（标记为手动触发）
-        $log = CronJobLog::create([
-            'cronjob_id' => $cronjob->id,
-            'status' => 'success',
-            'output' => '手动触发执行 - 等待 Hermes cron 系统处理',
-            'duration' => 0,
-        ]);
-
-        $cronjob->markSuccess();
+        // 分发到队列执行
+        \App\Jobs\ExecuteCronJob::dispatch($cronjob->id, isManual: true);
 
         return response()->json([
             'success' => true,
-            'message' => '任务已触发，等待执行',
-            'data' => $log,
+            'message' => '任务已提交执行',
         ]);
     }
 
