@@ -201,7 +201,7 @@ export default function Settings() {
               <div style={{ color: '#e5e7eb', fontSize: 14 }}>管理员权限</div>
               <div style={{ color: '#9ca3af', fontSize: 12, marginTop: 4 }}>你可以随时更换看板娘形象</div>
             </div>
-            <Button type="primary" onClick={() => { resetMascot(); window.location.href = '/select-mascot' }}>
+            <Button type="primary" onClick={() => { window.location.href = '/select-mascot' }}>
               更换形象
             </Button>
           </div>

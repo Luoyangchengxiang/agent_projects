@@ -137,11 +137,27 @@ export default function Live2DRenderer({ onHover, onClick }) {
       {/* 回退：CatAvatar SVG（非 Live2D 模型 或 Live2D 失败时显示） */}
       {(!isLive2dModel || live2dFailed || !live2dReady) && (
         <>
-          <CatAvatar
-            size={120}
-            expression={expression}
-            modelId={currentModel?.id || 'cat-black'}
-          />
+          {/* 光晕底层 */}
+          <div style={{
+            position: 'absolute',
+            bottom: 30,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 100,
+            height: 100,
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(74, 222, 128, 0.15) 0%, rgba(74, 222, 128, 0.05) 50%, transparent 70%)',
+            filter: 'blur(8px)',
+            animation: 'mascotGlow 3s ease-in-out infinite',
+            pointerEvents: 'none',
+          }} />
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <CatAvatar
+              size={120}
+              expression={expression}
+              modelId={currentModel?.id || 'cat-black'}
+            />
+          </div>
           {/* 名字 */}
           <div style={{
             marginTop: 5,

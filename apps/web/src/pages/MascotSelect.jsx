@@ -19,6 +19,9 @@ export default function MascotSelect() {
   const navigate = useNavigate()
   // 用后端数据库的 mascot_model_id 判断（不可被前端篡改）
   const hasExistingMascot = !!user?.mascot_model_id
+  const isAdmin = user?.role === 'admin'
+  // 管理员或已有看板娘的用户可以看到返回按钮
+  const canGoBack = hasExistingMascot || isAdmin
 
   const selectedModel = models.find(m => m.id === selected)
 
@@ -36,8 +39,8 @@ export default function MascotSelect() {
   return (
     <div className="mascot-select">
       <div className="mascot-select-container">
-        {/* 返回按钮 — 后端已有看板娘记录时显示（首次选择不显示） */}
-        {hasExistingMascot && (
+        {/* 返回按钮 — 管理员或已有看板娘的用户可见 */}
+        {canGoBack && (
           <button
             onClick={() => navigate('/', { replace: true })}
             style={{
