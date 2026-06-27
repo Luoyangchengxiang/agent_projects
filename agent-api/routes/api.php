@@ -84,8 +84,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{alertRule}/check', [App\Http\Controllers\Api\AlertController::class, 'checkRule']);
     });
 
-    // ==================== 客服系统（管理员、客服）====================
-    Route::prefix('chat')->middleware('role:admin,support')->group(function () {
+    // ==================== 客服系统 ====================
+    Route::prefix('chat')->group(function () {
         // 对话管理
         Route::post('/conversations', [App\Http\Controllers\Api\ChatController::class, 'createConversation']);
         Route::get('/conversations', [App\Http\Controllers\Api\ChatController::class, 'conversations']);
@@ -94,14 +94,16 @@ Route::middleware('auth:sanctum')->group(function () {
         // 消息
         Route::post('/messages', [App\Http\Controllers\Api\ChatController::class, 'sendMessage']);
 
-        // 人工接管/释放
-        Route::post('/takeover', [App\Http\Controllers\Api\ChatController::class, 'takeover']);
-        Route::post('/release', [App\Http\Controllers\Api\ChatController::class, 'release']);
-        Route::post('/close', [App\Http\Controllers\Api\ChatController::class, 'close']);
-        Route::post('/human-reply', [App\Http\Controllers\Api\ChatController::class, 'humanReply']);
-
         // 系统状态
         Route::get('/status', [App\Http\Controllers\Api\ChatController::class, 'status']);
+
+        // 人工接管/释放（仅管理员、客服）
+        Route::middleware('role:admin,support')->group(function () {
+            Route::post('/takeover', [App\Http\Controllers\Api\ChatController::class, 'takeover']);
+            Route::post('/release', [App\Http\Controllers\Api\ChatController::class, 'release']);
+            Route::post('/close', [App\Http\Controllers\Api\ChatController::class, 'close']);
+            Route::post('/human-reply', [App\Http\Controllers\Api\ChatController::class, 'humanReply']);
+        });
     });
 
     // ==================== 权限管理 ====================

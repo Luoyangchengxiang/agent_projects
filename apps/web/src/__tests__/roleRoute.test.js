@@ -116,7 +116,10 @@ describe('后端权限中间件配置验证', () => {
     'error-logs': ['admin'],
     'reports': ['admin', 'vip'],
     'cronjobs': ['admin'],
-    'chat': ['admin', 'support'],
+    'chat/conversations': [],        // 所有用户可创建/查看对话
+    'chat/messages': [],             // 所有用户可发消息
+    'chat/status': [],               // 所有用户可查看状态
+    'chat/takeover': ['admin', 'support'],  // 仅客服管理
     'permissions/users': ['admin'],
     'permissions/me': [],  // 所有已登录用户
   }
@@ -133,8 +136,14 @@ describe('后端权限中间件配置验证', () => {
     expect(apiPermissions['cronjobs']).toEqual(['admin'])
   })
 
-  it('chat 仅 admin+support 可访问', () => {
-    expect(apiPermissions['chat']).toEqual(['admin', 'support'])
+  it('chat 对话/消息/状态 所有用户可访问', () => {
+    expect(apiPermissions['chat/conversations']).toEqual([])
+    expect(apiPermissions['chat/messages']).toEqual([])
+    expect(apiPermissions['chat/status']).toEqual([])
+  })
+
+  it('chat 管理功能仅 admin+support 可访问', () => {
+    expect(apiPermissions['chat/takeover']).toEqual(['admin', 'support'])
   })
 
   it('permissions/users 仅 admin 可访问', () => {
@@ -162,7 +171,7 @@ describe('后端权限中间件配置验证', () => {
         case '错误日志': apiKey = 'error-logs'; break
         case '数据报告': apiKey = 'reports'; break
         case '定时任务': apiKey = 'cronjobs'; break
-        case '客服管理': apiKey = 'chat'; break
+        case '客服管理': apiKey = 'chat/takeover'; break
         case '权限管理': apiKey = 'permissions/users'; break
       }
       expect(item.roles).toEqual(apiPermissions[apiKey],
