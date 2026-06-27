@@ -32,6 +32,19 @@
   - 独立知识库构建脚本（断点续传 + 进度保存 + 重试机制）
   - BuildKnowledgeBase 命令优化：批次缩小到 5、超时 180s、最大重试 2 次
 
+- **数据库自动备份系统**
+  - `backup-db.sh`：备份/恢复/清理三合一（pg_dump + gzip）
+  - 启动时自动恢复最新备份 → 迁移 → 填充种子 → 备份当前数据
+  - 凌晨 2 点 crontab 自动备份
+  - 备份保留策略：正常 3 份，恢复后只保留最新 1 份
+  - `start-backend.sh`：一键启动（恢复 + 迁移 + 填充 + 备份 + 启动）
+
+- **Seeders 幂等化**
+  - AgentSeeder：`firstOrCreate` + 日志去重
+  - GraphSeeder：已有数据跳过
+  - VersionUpdateSeeder：`firstOrCreate` 按版本号
+  - DatabaseSeeder：串联所有子 seeder，`migrate:fresh --seed` 自动恢复
+
 ### 🐛 Bug 修复
 
 - 修复客服聊天 API 权限过严：创建对话、发消息等用户功能被错误限制为仅 admin/support 可用
@@ -47,8 +60,10 @@
 ### ✅ 测试
 
 - 新增 20 个权限相关测试用例（路由保护 + 菜单过滤 + 前后端一致性验证）
+- 新增 9 个 Seeders 幂等性测试（每个 seeder 独立 + 完整运行 + 重复运行不重复）
+- 新增 8 个备份系统测试（脚本存在性 + 备份格式 + 保留策略 + crontab 配置）
 - 前端 198 个测试用例全部通过
-- 后端 77 个 PHPUnit 测试全部通过
+- 后端 94 个 PHPUnit 测试全部通过（原 77 + 新增 17）
 
 ### 🔒 安全
 
