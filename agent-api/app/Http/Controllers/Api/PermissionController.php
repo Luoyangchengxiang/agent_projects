@@ -143,7 +143,92 @@ class PermissionController extends Controller
     }
 
     /**
-     * 获取当前用户权限信息
+     * 创建用户（管理员）
+     */
+    public function store(Request $request): JsonResponse
+    {
+        if (!$request->user()->canManageUsers()) {
+            return response()->json([
+                'success' => false,
+                'message' => '无权限访问',
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:50|regex:/^[a-zA-Z0-9_-]+$/|unique:users,name',
+            'password' => 'required|string|min:6|max:100',
+            'role' => 'nullable|in:user,vip,support,admin',
+        ], [
+            'name.required' => '请输入用户名',
+            'name.regex' => '用户名只能包含字母、数字、下划线和短横线',
+            'name.unique' => '该用户名已存在',
+            'name.max' => '用户名不能超过50个字符',
+            'password.required' => '请输入密码',
+            'password.min' => '密码不能少于6位',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => '参数错误',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $user = User::create([
+            'name' => $request->name,
+            'nickname' => '用户_' . $request->name,
+            'email' => $request->name . '@local',
+            'password' => $request->password,
+            'role' => $request->role ?? 'user',
+            'status' => 'active',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => '用户创建成功',
+            'data' => $user,
+        ], 201);
+    }
+
+    /**
+     * 删除用户（管理员）
+     */
+    public function destroy(Request $request, int $id): JsonResponse
+    {
+        if (!$request->user()->canManageUsers()) {
+            return response()->json([
+                'success' => false,
+                'message' => '无权限访问',
+            ], 403);
+        }
+
+        $user = User::find($id);
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => '用户不存在',
+            ], 404);
+        }
+
+        // 不能删除自己
+        if ($user->id === $request->user()->id) {
+            return response()->json([
+                'success' => false,
+                'message' => '不能删除自己',
+            ], 422);
+        }
+
+        $user->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => '用户已删除',
+        ]);
+    }
+
+    /**
+    * 获取当前用户权限信息
      */
     public function me(Request $request): JsonResponse
     {

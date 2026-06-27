@@ -3,8 +3,8 @@
  * 管理用户角色和权限
  */
 import { useState, useEffect } from 'react'
-import { Table, Tag, Select, Input, Button, Space, App, Modal, Transfer } from 'antd'
-import { UserOutlined, SearchOutlined, EditOutlined } from '@ant-design/icons'
+import { Table, Tag, Select, Input, Button, Space, App, Modal, Transfer, Form, Popconfirm } from 'antd'
+import { UserOutlined, SearchOutlined, EditOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons'
 import { permissionApi } from '@agent-monitor/api'
 
 // 可分配的权限列表
@@ -27,6 +27,9 @@ export default function PermissionManagement() {
   const [editingUser, setEditingUser] = useState(null)
   const [permissionsModalOpen, setPermissionsModalOpen] = useState(false)
   const [selectedPermissions, setSelectedPermissions] = useState([])
+  const [createModalOpen, setCreateModalOpen] = useState(false)
+  const [createForm] = Form.useForm()
+  const [creating, setCreating] = useState(false)
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 20,
@@ -59,6 +62,43 @@ export default function PermissionManagement() {
       message.error('加载用户失败')
     } finally {
       setLoading(false)
+    }
+  }
+
+  // 创建用户
+  const handleCreate = async () => {
+    try {
+      const values = await createForm.validateFields()
+      setCreating(true)
+      const response = await permissionApi.createUser({
+        name: values.name,
+        password: values.password,
+        role: values.role || 'user',
+      })
+      if (response.success) {
+        message.success('用户创建成功')
+        setCreateModalOpen(false)
+        createForm.resetFields()
+        loadUsers()
+      }
+    } catch (error) {
+      if (error.errorFields) return // 表单验证失败
+      message.error('创建失败：' + (error.message || '未知错误'))
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  // 删除用户
+  const handleDelete = async (userId) => {
+    try {
+      const response = await permissionApi.deleteUser(userId)
+      if (response.success) {
+        message.success('用户已删除')
+        loadUsers()
+      }
+    } catch (error) {
+      message.error('删除失败：' + (error.message || '未知错误'))
     }
   }
 
@@ -126,17 +166,6 @@ export default function PermissionManagement() {
       dataIndex: 'role',
       key: 'role',
       render: (role, record) => {
-        const roleColors = {
-          admin: 'red',
-          vip: 'gold',
-          user: 'blue'
-        }
-        const roleNames = {
-          admin: '管理员',
-          vip: 'VIP 用户',
-          user: '普通用户'
-        }
-
         return (
           <Select
             value={role}
@@ -145,6 +174,7 @@ export default function PermissionManagement() {
             options={[
               { value: 'user', label: '普通用户' },
               { value: 'vip', label: 'VIP 用户' },
+              { value: 'support', label: '客服' },
               { value: 'admin', label: '管理员' }
             ]}
           />
@@ -188,10 +218,23 @@ export default function PermissionManagement() {
       }
     },
     {
-      title: '创建时间',
-      dataIndex: 'created_at',
-      key: 'created_at',
-      render: (text) => <span className="text-muted">{new Date(text).toLocaleString('zh-CN')}</span>
+      title: '操作',
+      key: 'action',
+      width: 80,
+      render: (_, record) => (
+        <Popconfirm
+          title="确定删除该用户？"
+          description="删除后不可恢复"
+          onConfirm={() => handleDelete(record.id)}
+          okText="删除"
+          cancelText="取消"
+          okButtonProps={{ danger: true }}
+        >
+          <Button type="link" danger size="small" icon={<DeleteOutlined />}>
+            删除
+          </Button>
+        </Popconfirm>
+      )
     }
   ]
 
@@ -226,11 +269,15 @@ export default function PermissionManagement() {
               }}
               options={[
                 { value: 'admin', label: '管理员' },
+                { value: 'support', label: '客服' },
                 { value: 'vip', label: 'VIP 用户' },
                 { value: 'user', label: '普通用户' }
               ]}
             />
             <Button type="primary" onClick={loadUsers}>搜索</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateModalOpen(true)}>
+              新增用户
+            </Button>
           </Space>
         </div>
       </div>
@@ -246,6 +293,58 @@ export default function PermissionManagement() {
           onChange={(pag) => setPagination(pag)}
         />
       </div>
+
+      {/* 新增用户弹窗 */}
+      <Modal
+        title="新增用户"
+        open={createModalOpen}
+        onCancel={() => {
+          setCreateModalOpen(false)
+          createForm.resetFields()
+        }}
+        onOk={handleCreate}
+        confirmLoading={creating}
+        okText="创建"
+        cancelText="取消"
+      >
+        <Form form={createForm} layout="vertical" style={{ marginTop: 16 }}>
+          <Form.Item
+            name="name"
+            label="用户名"
+            rules={[
+              { required: true, message: '请输入用户名' },
+              { pattern: /^[a-zA-Z0-9_-]+$/, message: '只能包含字母、数字、下划线和短横线' },
+              { max: 50, message: '不能超过50个字符' },
+            ]}
+          >
+            <Input placeholder="输入用户名" />
+          </Form.Item>
+          <Form.Item
+            name="password"
+            label="密码"
+            rules={[
+              { required: true, message: '请输入密码' },
+              { min: 6, message: '密码不能少于6位' },
+            ]}
+          >
+            <Input.Password placeholder="输入密码" />
+          </Form.Item>
+          <Form.Item
+            name="role"
+            label="角色"
+            initialValue="user"
+          >
+            <Select
+              options={[
+                { value: 'user', label: '普通用户' },
+                { value: 'vip', label: 'VIP 用户' },
+                { value: 'support', label: '客服' },
+                { value: 'admin', label: '管理员' }
+              ]}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
 
       {/* 权限编辑弹窗 */}
       <Modal

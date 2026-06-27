@@ -114,8 +114,10 @@ Route::middleware('auth:sanctum')->group(function () {
     });
     Route::prefix('permissions')->middleware('role:admin')->group(function () {
         Route::get('/users', [App\Http\Controllers\Api\PermissionController::class, 'index']);
+        Route::post('/users', [App\Http\Controllers\Api\PermissionController::class, 'store']);
         Route::put('/users/{id}/role', [App\Http\Controllers\Api\PermissionController::class, 'updateRole']);
         Route::put('/users/{id}/permissions', [App\Http\Controllers\Api\PermissionController::class, 'updatePermissions']);
+        Route::delete('/users/{id}', [App\Http\Controllers\Api\PermissionController::class, 'destroy']);
     });
 
     // ==================== 报告系统（管理员、VIP）====================

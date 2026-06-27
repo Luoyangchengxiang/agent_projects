@@ -231,6 +231,16 @@ export const permissionApi = {
   // 更新用户权限
   updatePermissions(userId: number, permissions: string[]): Promise<ApiResponse<any>> {
     return api.put(`/permissions/users/${userId}/permissions`, { permissions })
+  },
+
+  // 创建用户（管理员）
+  createUser(data: { name: string; password: string; role?: string }): Promise<ApiResponse<any>> {
+    return api.post('/permissions/users', data)
+  },
+
+  // 删除用户（管理员）
+  deleteUser(userId: number): Promise<ApiResponse<any>> {
+    return api.delete(`/permissions/users/${userId}`)
   }
 }
 
