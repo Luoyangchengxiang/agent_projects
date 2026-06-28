@@ -4,70 +4,104 @@ namespace App\Services;
 
 /**
  * 报告摘要生成服务
- * 从完整报告中提取关键信息生成摘要
+ * 从完整报告中提取关键信息生成结果汇总
  */
 class ReportSummaryService
 {
     /**
-     * 从报告内容生成摘要
+     * 从报告内容生成结果汇总
      *
      * @param string $content 完整报告内容
-     * @return string 摘要
+     * @return string 结果汇总
      */
     public static function generate(string $content): string
     {
         $summary = [];
         
         // 1. 提取调研日期
-        if (preg_match('/调研日期[：:]\s*(.+)/', $content, $matches)) {
-            $summary[] = '调研日期：' . trim($matches[1]);
+        if (preg_match('/调研日期[：:]\\s*\\*\\*\\s*(.+)/u', $content, $matches)) {
+            $date = trim($matches[1]);
+            // 清理日期中的特殊字符
+            $date = preg_replace('/[^\\x{4e00}-\\x{9fa5}\\d年月日星期（）()\\s-]/u', '', $date);
+            $summary[] = '📅 ' . $date;
         }
         
-        // 2. 统计品类数量
-        $categoryCount = preg_match_all('/###\s*\d+\.\s*(.+)/', $content, $categoryMatches);
-        if ($categoryCount > 0) {
-            $summary[] = '分析品类：' . $categoryCount . '个';
-            // 取前3个品类名
-            $categories = array_slice($categoryMatches[1], 0, 3);
-            $summary[] = '主要品类：' . implode('、', $categories);
+        // 2. 提取今日品类
+        $categories = [];
+        if (preg_match('/核心品类\\s*\\|\\s*\\*\\*(.+?)\\*\\*/u', $content, $matches)) {
+            $categories[] = trim($matches[1]);
+        }
+        if (preg_match('/探索品类A\\s*\\|\\s*\\*\\*(.+?)\\*\\*/u', $content, $matches)) {
+            $categories[] = trim($matches[1]);
+        }
+        if (preg_match('/探索品类B\\s*\\|\\s*\\*\\*(.+?)\\*\\*/u', $content, $matches)) {
+            $categories[] = trim($matches[1]);
+        }
+        if (!empty($categories)) {
+            $summary[] = '📊 品类：' . implode('、', $categories);
         }
         
-        // 3. 提取热销商品数量
-        $hotProductCount = preg_match_all('/热销TOP\s*(\d+)/i', $content, $hotMatches);
-        if ($hotProductCount > 0) {
-            $totalHot = array_sum($hotMatches[1]);
-            $summary[] = '热销商品：' . $totalHot . '个';
+        // 3. 提取首推SKU
+        if (preg_match('/首推SKU[：:]\\s*(.+?)\\n/ui', $content, $matches)) {
+            $sku = trim($matches[1]);
+            // 清理 markdown 格式
+            $sku = preg_replace('/\\*\\*/u', '', $sku);
+            $summary[] = '⭐ 首推：' . $sku;
         }
         
-        // 4. 提取推荐商品数量
-        $recommendCount = preg_match_all('/推荐[选选]品[：:]\s*(\d+)/i', $content, $recMatches);
-        if ($recommendCount > 0) {
-            $summary[] = '推荐选品：' . $recMatches[1][0] . '个';
+        // 4. 提取首推利润率
+        if (preg_match('/首推SKU[\\s\\S]*?预估利润[：:]\\s*(.+?)\\n/ui', $content, $matches)) {
+            $profit = trim($matches[1]);
+            $profit = preg_replace('/\\*\\*/u', '', $profit);
+            $summary[] = '💰 利润：' . $profit;
         }
         
-        // 5. 提取高潜力品类
-        if (preg_match('/高潜力品类[：:]\s*(.+)/i', $content, $matches)) {
-            $summary[] = '高潜力品类：' . trim($matches[1]);
+        // 5. 提取预估月利润
+        if (preg_match('/预估月利润[：:]\\s*(.+?)\\n/ui', $content, $matches)) {
+            $profit = trim($matches[1]);
+            $profit = preg_replace('/\\*\\*/u', '', $profit);
+            $summary[] = '💰 月利润：' . $profit;
         }
         
-        // 6. 提取注意事项数量
-        $noteCount = preg_match_all('/^\s*[-*]\s+(.+)$/m', $content, $noteMatches);
-        if ($noteCount > 0) {
-            $summary[] = '注意事项：' . $noteCount . '条';
+        // 如果没有提取到有意义的信息，返回默认汇总
+        if (count($summary) < 2) {
+            return self::generateDefaultSummary($content);
         }
-        
-        // 7. 提取报告大小
-        $size = strlen($content);
-        $summary[] = '报告大小：' . round($size / 1024, 1) . 'KB';
         
         return implode(' | ', $summary);
     }
     
     /**
-     * 从文件生成摘要
+     * 生成默认汇总（当无法提取关键信息时）
+     */
+    private static function generateDefaultSummary(string $content): string
+    {
+        $parts = [];
+        
+        // 统计品类数量
+        $categoryCount = preg_match_all('/###\\s*\\d+\\.\\s*(.+)/u', $content, $matches);
+        if ($categoryCount > 0) {
+            $parts[] = '分析' . $categoryCount . '个品类';
+        }
+        
+        // 统计热销商品
+        $hotCount = preg_match_all('/热销前三名/u', $content);
+        if ($hotCount > 0) {
+            $parts[] = $hotCount . '个热销商品';
+        }
+        
+        // 报告大小
+        $size = strlen($content);
+        $parts[] = round($size / 1024, 1) . 'KB';
+        
+        return implode('，', $parts);
+    }
+    
+    /**
+     * 从文件生成结果汇总
      *
      * @param string $filePath 文件路径
-     * @return string 摘要
+     * @return string 结果汇总
      */
     public static function generateFromFile(string $filePath): string
     {

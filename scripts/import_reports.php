@@ -10,6 +10,7 @@ $app = require_once __DIR__ . '/../agent-api/bootstrap/app.php';
 $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
 use Illuminate\Support\Facades\DB;
+use App\Services\ReportSummaryService;
 
 // 清空执行日志
 DB::table('execution_logs')->delete();
@@ -41,8 +42,8 @@ foreach (sorted($files) as $file) {
     $content = file_get_contents($file);
     $content = mb_convert_encoding($content, 'UTF-8', 'UTF-8');
     
-    // 生成摘要
-    $summary = generateSummary($content);
+    // 使用新的结果汇总服务
+    $summary = ReportSummaryService::generate($content);
     
     // 检查是否已存在
     $exists = DB::table('execution_logs')
@@ -71,7 +72,7 @@ foreach (sorted($files) as $file) {
     ]);
     
     $count++;
-    echo "✅ {$date}: " . mb_substr($summary, 0, 60) . "...\n";
+    echo "✅ {$date}: " . mb_substr($summary, 0, 60) . "\n";
 }
 
 // 验证
@@ -89,40 +90,6 @@ $logs = DB::table('execution_logs')
 echo "\n最新记录:\n";
 foreach ($logs as $log) {
     echo "  {$log->created_at} | " . mb_substr($log->result_summary, 0, 60) . "...\n";
-}
-
-/**
- * 生成报告摘要
- */
-function generateSummary(string $content): string
-{
-    $summary = [];
-    
-    // 统计品类数量
-    if (preg_match_all('/###\s*\d+\.\s*(.+)/', $content, $matches)) {
-        $count = count($matches[1]);
-        $summary[] = "分析品类：{$count}个";
-        $categories = array_slice($matches[1], 0, 3);
-        $summary[] = "主要品类：" . implode('、', $categories);
-    }
-    
-    // 统计热销商品
-    if (preg_match_all('/热销TOP\s*(\d+)/i', $content, $matches)) {
-        $total = array_sum(array_map('intval', $matches[1]));
-        $summary[] = "热销商品：{$total}个";
-    }
-    
-    // 统计注意事项
-    if (preg_match_all('/^\s*[-*]\s+(.+)$/m', $content, $matches)) {
-        $count = count($matches[1]);
-        $summary[] = "注意事项：{$count}条";
-    }
-    
-    // 报告大小
-    $size = strlen($content);
-    $summary[] = "报告大小：" . round($size / 1024, 1) . "KB";
-    
-    return implode(' | ', $summary);
 }
 
 /**
