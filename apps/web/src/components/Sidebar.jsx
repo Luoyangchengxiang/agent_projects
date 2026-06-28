@@ -61,22 +61,22 @@ function Sidebar() {
         <p className="text-xs text-muted mt-1">智能体监控系统</p>
       </div>
 
-      {/* 导航菜单 */}
-      <nav className="mt-4 px-3">
+      {/* 导航菜单 - 可滚动 */}
+      <nav className="mt-2 px-3 overflow-y-auto flex-1" style={{ maxHeight: 'calc(100vh - 220px)' }}>
         {filteredMenuItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
             end={item.path === '/'}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 rounded-md mb-1 transition-all duration-200 ${
+              `flex items-center gap-2 px-3 py-2 rounded-md mb-0.5 transition-all duration-200 ${
                 isActive
                   ? 'bg-primary/10 text-primary'
                   : 'text-secondary hover:text-primary hover:bg-surface'
               }`
             }
           >
-            <span className="text-lg">{item.icon}</span>
+            <span className="text-base">{item.icon}</span>
             <span className="text-sm font-medium">{item.label}</span>
           </NavLink>
         ))}
