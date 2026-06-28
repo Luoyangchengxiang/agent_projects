@@ -21,6 +21,8 @@ const Register = lazy(() => import('./pages/Register'))
 const MascotSelect = lazy(() => import('./pages/MascotSelect'))
 const PermissionManagement = lazy(() => import('./pages/PermissionManagement'))
 const Settings = lazy(() => import('./pages/Settings'))
+const SystemAlerts = lazy(() => import('./pages/SystemAlerts'))
+const SystemLogs = lazy(() => import('./pages/SystemLogs'))
 
 // 页面加载占位
 function PageLoading() {
@@ -135,6 +137,12 @@ function App({ onReady }) {
             } />
             <Route path="permissions" element={
               <RoleRoute roles={['admin']}><PermissionManagement /></RoleRoute>
+            } />
+            <Route path="system-alerts" element={
+              <RoleRoute roles={['admin']}><SystemAlerts /></RoleRoute>
+            } />
+            <Route path="system-logs" element={
+              <RoleRoute roles={['admin']}><SystemLogs /></RoleRoute>
             } />
             <Route path="settings" element={<Settings />} />
           </Route>

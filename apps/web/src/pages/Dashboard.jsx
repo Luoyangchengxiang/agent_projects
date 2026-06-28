@@ -215,30 +215,30 @@ function Dashboard() {
             {/* 详细信息 */}
             {system && (
               <div className="mt-4 pt-4 border-t border-border">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-muted">CPU核心：</span>
-                    <span className="text-primary ml-1">{system.cpu?.cores || '-'}</span>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted">CPU核心</span>
+                    <span className="text-primary font-medium">{system.cpu?.cores || '-'}</span>
                   </div>
-                  <div>
-                    <span className="text-muted">运行时间：</span>
-                    <span className="text-primary ml-1">{system.uptime || '-'}</span>
+                  <div className="flex justify-between">
+                    <span className="text-muted">运行时间</span>
+                    <span className="text-primary font-medium text-right">{system.uptime || '-'}</span>
                   </div>
-                  <div>
-                    <span className="text-muted">总内存：</span>
-                    <span className="text-primary ml-1">{system.memory?.total || 0} GB</span>
+                  <div className="flex justify-between">
+                    <span className="text-muted">总内存</span>
+                    <span className="text-primary font-medium">{system.memory?.total || 0} GB</span>
                   </div>
-                  <div>
-                    <span className="text-muted">可用内存：</span>
-                    <span className="text-primary ml-1">{system.memory?.free || 0} GB</span>
+                  <div className="flex justify-between">
+                    <span className="text-muted">可用内存</span>
+                    <span className="text-primary font-medium">{system.memory?.free || 0} GB</span>
                   </div>
-                  <div>
-                    <span className="text-muted">总磁盘：</span>
-                    <span className="text-primary ml-1">{system.disk?.total || 0} GB</span>
+                  <div className="flex justify-between">
+                    <span className="text-muted">总磁盘</span>
+                    <span className="text-primary font-medium">{system.disk?.total || 0} GB</span>
                   </div>
-                  <div>
-                    <span className="text-muted">可用磁盘：</span>
-                    <span className="text-primary ml-1">{system.disk?.free || 0} GB</span>
+                  <div className="flex justify-between">
+                    <span className="text-muted">可用磁盘</span>
+                    <span className="text-primary font-medium">{system.disk?.free || 0} GB</span>
                   </div>
                 </div>
               </div>

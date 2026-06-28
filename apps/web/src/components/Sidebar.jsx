@@ -12,6 +12,8 @@ import {
   UserOutlined,
   TeamOutlined,
   SettingOutlined,
+  AlertOutlined,
+  FileSearchOutlined,
 } from '@ant-design/icons'
 import { Badge } from 'antd'
 import useAuthStore from '../stores/authStore'
@@ -26,6 +28,8 @@ const menuItems = [
   { path: '/graph', icon: <ApartmentOutlined />, label: '知识图谱', roles: [] },
   { path: '/cronjobs', icon: <ClockCircleOutlined />, label: '定时任务', roles: ['admin'] },
   { path: '/chat', icon: <CustomerServiceOutlined />, label: '客服管理', roles: ['admin', 'support'] },
+  { path: '/system-alerts', icon: <AlertOutlined />, label: '系统告警', roles: ['admin'] },
+  { path: '/system-logs', icon: <FileSearchOutlined />, label: '系统日志', roles: ['admin'] },
   { path: '/permissions', icon: <TeamOutlined />, label: '权限管理', roles: ['admin'] },
   { path: '/settings', icon: <SettingOutlined />, label: '设置', roles: [] },
 ]
