@@ -128,9 +128,13 @@ class SeederIdempotencyTest extends TestCase
             $this->assertTrue(Agent::where('name', $name)->exists(), "应存在: {$name}");
         }
 
+        // Agent 数量应该正确
+        $this->assertEquals(5, Agent::count(), '应有 5 个智能体');
+
+        // 执行日志不再由 seeder 创建（由实际执行生成）
         foreach (Agent::all() as $agent) {
-            $this->assertEquals(5, $agent->executionLogs()->count(),
-                "{$agent->name} 应有 5 条日志");
+            $this->assertEquals(0, $agent->executionLogs()->count(),
+                "{$agent->name} 初始化时应无日志（日志由实际执行生成）");
         }
     }
 
