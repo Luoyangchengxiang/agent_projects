@@ -183,28 +183,31 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ==================== 系统告警（仅管理员）====================
     Route::prefix('system-alerts')->middleware('role:admin')->group(function () {
-        // 告警规则
+        // 固定路由必须在参数路由之前
+        Route::get('/stats', [App\Http\Controllers\Api\SystemAlertController::class, 'stats']);
+        Route::post('/check', [App\Http\Controllers\Api\SystemAlertController::class, 'check']);
+        Route::get('/histories', [App\Http\Controllers\Api\SystemAlertController::class, 'histories']);
+        Route::get('/histories/{alertHistory}', [App\Http\Controllers\Api\SystemAlertController::class, 'historyShow']);
+        Route::post('/histories/{alertHistory}/resolve', [App\Http\Controllers\Api\SystemAlertController::class, 'resolve']);
+
+        // 告警规则 CRUD
         Route::get('/', [App\Http\Controllers\Api\SystemAlertController::class, 'index']);
         Route::post('/', [App\Http\Controllers\Api\SystemAlertController::class, 'store']);
         Route::get('/{systemAlertRule}', [App\Http\Controllers\Api\SystemAlertController::class, 'show']);
         Route::put('/{systemAlertRule}', [App\Http\Controllers\Api\SystemAlertController::class, 'update']);
         Route::delete('/{systemAlertRule}', [App\Http\Controllers\Api\SystemAlertController::class, 'destroy']);
-        Route::post('/check', [App\Http\Controllers\Api\SystemAlertController::class, 'check']);
-
-        // 告警历史
-        Route::get('/histories', [App\Http\Controllers\Api\SystemAlertController::class, 'histories']);
-        Route::get('/histories/{alertHistory}', [App\Http\Controllers\Api\SystemAlertController::class, 'historyShow']);
-        Route::post('/histories/{alertHistory}/resolve', [App\Http\Controllers\Api\SystemAlertController::class, 'resolve']);
-        Route::get('/stats', [App\Http\Controllers\Api\SystemAlertController::class, 'stats']);
     });
 
     // ==================== 系统日志（仅管理员）====================
     Route::prefix('system-logs')->middleware('role:admin')->group(function () {
-        Route::get('/', [App\Http\Controllers\Api\SystemLogController::class, 'index']);
-        Route::get('/{systemLog}', [App\Http\Controllers\Api\SystemLogController::class, 'show']);
+        // 固定路由必须在参数路由之前
         Route::get('/stats', [App\Http\Controllers\Api\SystemLogController::class, 'stats']);
         Route::post('/cleanup', [App\Http\Controllers\Api\SystemLogController::class, 'cleanup']);
         Route::get('/categories', [App\Http\Controllers\Api\SystemLogController::class, 'categories']);
         Route::get('/levels', [App\Http\Controllers\Api\SystemLogController::class, 'levels']);
+
+        // 日志查询
+        Route::get('/', [App\Http\Controllers\Api\SystemLogController::class, 'index']);
+        Route::get('/{systemLog}', [App\Http\Controllers\Api\SystemLogController::class, 'show']);
     });
 });

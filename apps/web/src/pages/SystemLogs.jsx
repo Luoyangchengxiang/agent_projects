@@ -26,7 +26,7 @@ import {
   ErrorOutlined,
   InfoCircleOutlined,
   BugOutlined,
-  CleanOutlined,
+  ClearOutlined,
 } from '@ant-design/icons'
 
 const { Option } = Select
@@ -327,7 +327,7 @@ function SystemLogs() {
             title={`确定清理 ${cleanupDays} 天前的日志？`}
             onConfirm={handleCleanup}
           >
-            <Button icon={<CleanOutlined />} danger>
+            <Button icon={<ClearOutlined />} danger>
               清理旧日志
             </Button>
           </Popconfirm>
