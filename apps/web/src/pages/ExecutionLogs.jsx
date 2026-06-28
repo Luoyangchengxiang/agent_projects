@@ -239,7 +239,7 @@ function ExecutionLogs() {
 
       {/* 结果详情弹窗 */}
       <Modal
-        title={`执行结果详情 - ${selectedLog?.agent?.name || '未知'}`}
+        title={`执行结果详情 - ${selectedLog?.agent?.name || selectedLog?.agent_group || '未知'}`}
         open={detailVisible}
         onCancel={() => {
           setDetailVisible(false)
