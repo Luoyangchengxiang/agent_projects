@@ -19,7 +19,7 @@ export default function Login() {
     loginRef.current?.setError('')
 
     try {
-      await login(payload.login, payload.password)
+      await login(payload.login, payload.password, payload.remember)
 
       // 登录成功，检查是否已选择看板娘
       const redirect = searchParams.get('redirect')

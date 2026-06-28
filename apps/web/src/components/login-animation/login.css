@@ -330,3 +330,21 @@
     color: var(--text-primary, #e0e0e0);
   }
 }
+
+/* 记住登录提示 */
+.login-remember-hint {
+  font-size: 12px;
+  color: #10b981;
+  font-weight: normal;
+  margin-left: 8px;
+}
+
+.login-password-wrap input::placeholder {
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+/* 当是记住登录时，密码框背景色 */
+.login-password-wrap input[data-remember="true"] {
+  background-color: rgba(16, 185, 129, 0.05);
+}

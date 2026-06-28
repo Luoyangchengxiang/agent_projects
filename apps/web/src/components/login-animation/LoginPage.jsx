@@ -6,16 +6,6 @@ import './login.css'
 
 /**
  * 登录页面组件 — 左侧动画角色 + 右侧登录表单
- * Vue 原版：LoginPage.vue
- *
- * Props:
- * - brandName: 品牌名称
- * - title: 标题
- * - subtitle: 副标题
- * - emailPlaceholder: 邮箱输入框占位符
- * - primaryColor: 主题色
- * - showGoogleLogin: 是否显示 Google 登录
- * - onSubmit: 提交回调 (payload) => void
  */
 const LoginPage = forwardRef(function LoginPage({
   brandName = 'YourBrand',
@@ -28,22 +18,49 @@ const LoginPage = forwardRef(function LoginPage({
   footerLink,
 }, ref) {
   const [showPassword, setShowPassword] = useState(false)
-  const [login, setLogin] = useState('')  // 用户名或邮箱
+  const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [loading, setLoading] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
+  const [isRememberLogin, setIsRememberLogin] = useState(false)
 
-  // 初始化时检查是否有记住的登录信息
+  // 初始化时加载最后一个记住的用户
   useEffect(() => {
-    const remembered = tokenManager.getRemember()
-    if (remembered) {
-      setLogin(remembered.login)
-      setPassword(remembered.password)
+    const lastRemembered = tokenManager.getLastRemembered()
+    if (lastRemembered) {
+      setLogin(lastRemembered.login)
+      setPassword(lastRemembered.rememberToken)
       setRemember(true)
+      setIsRememberLogin(true)
     }
   }, [])
+
+  // 当用户名变化时，检查是否有对应的 remember_token
+  const handleLoginChange = (e) => {
+    const newLogin = e.target.value
+    setLogin(newLogin)
+    
+    // 检查新用户名是否有对应的 remember_token
+    if (newLogin) {
+      const remembered = tokenManager.getRemember(newLogin)
+      if (remembered) {
+        setPassword(remembered.rememberToken)
+        setRemember(true)
+        setIsRememberLogin(true)
+      } else {
+        // 如果没有对应的 remember_token，清空密码
+        setPassword('')
+        setRemember(false)
+        setIsRememberLogin(false)
+      }
+    } else {
+      setPassword('')
+      setRemember(false)
+      setIsRememberLogin(false)
+    }
+  }
 
   // 暴露给父组件的方法
   useImperativeHandle(ref, () => ({
@@ -55,14 +72,10 @@ const LoginPage = forwardRef(function LoginPage({
     e.preventDefault()
     setErrorMsg('')
 
-    // 处理记住密码
-    if (remember) {
-      tokenManager.saveRemember(login, password)
-    } else {
-      tokenManager.clearRemember()
-    }
-
-    onSubmit?.({ login, password, remember })
+    // 注意：不在这里清除 remember_token
+    // 由 authService 在登录成功后根据 remember 参数决定是否保存/清除
+    
+    onSubmit?.({ login, password, remember, isRememberLogin })
   }
 
   return (
@@ -105,15 +118,16 @@ const LoginPage = forwardRef(function LoginPage({
             <p>{subtitle}</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="login-form">
+          <form onSubmit={handleSubmit} className="login-form" autoComplete="on">
             <div className="login-field">
               <label htmlFor="login-input">用户名 / 邮箱</label>
               <input
                 id="login-input"
                 type="text"
+                name="username"
                 placeholder="请输入用户名或邮箱"
                 value={login}
-                onChange={(e) => setLogin(e.target.value)}
+                onChange={handleLoginChange}
                 onFocus={() => setIsTyping(true)}
                 onBlur={() => setIsTyping(false)}
                 autoComplete="username"
@@ -122,14 +136,27 @@ const LoginPage = forwardRef(function LoginPage({
             </div>
 
             <div className="login-field">
-              <label htmlFor="login-password">密码</label>
+              <label htmlFor="login-password">
+                密码
+                {isRememberLogin && (
+                  <span className="login-remember-hint">（已记住登录）</span>
+                )}
+              </label>
               <div className="login-password-wrap">
                 <input
                   id="login-password"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="请输入密码"
+                  name="password"
+                  placeholder={isRememberLogin ? '已记住登录，直接点击登录' : '请输入密码'}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value || '')
+                    // 如果用户手动修改了密码，标记为非 remember 登录
+                    if (isRememberLogin) {
+                      setIsRememberLogin(false)
+                    }
+                  }}
+                  autoComplete={isRememberLogin ? 'off' : 'current-password'}
                   required
                 />
                 <button

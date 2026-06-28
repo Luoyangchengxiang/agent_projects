@@ -17,10 +17,10 @@ const useAuthStore = create((set, get) => ({
   error: null,
 
   // 登录（支持用户名或邮箱）
-  login: async (login, password) => {
+  login: async (login, password, remember = false) => {
     set({ isLoading: true, error: null })
     try {
-      const result = await authService.login(login, password)
+      const result = await authService.login(login, password, remember)
       console.log('[AuthStore] 登录成功:', result)
       set({
         user: result.user,

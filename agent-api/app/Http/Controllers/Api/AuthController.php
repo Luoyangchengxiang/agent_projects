@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\RememberToken;
 use App\Services\CaptchaService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -55,20 +56,82 @@ class AuthController extends Controller
     }
 
     /**
+     * 检查密码是否是 remember_token
+     */
+    private function isRememberToken(string $password): bool
+    {
+        return str_starts_with($password, RememberToken::TOKEN_PREFIX);
+    }
+
+    /**
+     * 通过 remember_token 查找用户
+     */
+    private function findUserByRememberToken(string $token): ?User
+    {
+        $rememberToken = RememberToken::findByToken($token);
+        if (!$rememberToken) {
+            return null;
+        }
+        return $rememberToken->user;
+    }
+
+    /**
+     * 生成登录响应
+     */
+    private function loginResponse(User $user, bool $remember, string $clientIp, bool $isLocalLogin = false): JsonResponse
+    {
+        // 创建 Sanctum token（用于 API 认证）
+        $token = $user->createToken('auth-token', ['*'])->plainTextToken;
+
+        // 生成 remember_token（如果需要）
+        $rememberToken = null;
+        if ($remember) {
+            $deviceInfo = request()->header('User-Agent');
+            $rememberToken = RememberToken::createForUser($user, $deviceInfo, $clientIp);
+        }
+
+        // 更新最后登录信息
+        $user->update([
+            'last_login_at' => now(),
+            'last_login_ip' => $clientIp,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => $isLocalLogin ? '本地IP快捷登录成功' : '登录成功',
+            'data' => [
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'nickname' => $user->nickname,
+                    'email' => $user->email,
+                    'role' => $user->role,
+                    'mascot_model_id' => $user->mascot_model_id,
+                ],
+                'token' => $token,
+                'remember_token' => $rememberToken,
+                'is_local_login' => $isLocalLogin,
+            ],
+        ]);
+    }
+
+    /**
      * POST /api/auth/login
-     * 用户登录（支持用户名或邮箱 + 密码）
+     * 用户登录（支持用户名或邮箱 + 密码 或 remember_token）
      *
-     * 特殊逻辑：本地IP可以使用 admin/123456 直接登录
+     * 特殊逻辑：
+     * - 本地IP可以使用 admin/123456 直接登录
+     * - 支持 remember_token 登录（密码字段传 remember_token）
      */
     public function login(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'login' => 'required|string',  // 用户名或邮箱
-            'password' => 'required|string|min:6',
+            'login' => 'required|string',
+            'password' => 'required|string',
+            'remember' => 'nullable|boolean',
         ], [
             'login.required' => '请输入用户名或邮箱',
             'password.required' => '请输入密码',
-            'password.min' => '密码至少需要6个字符',
         ]);
 
         if ($validator->fails()) {
@@ -81,7 +144,35 @@ class AuthController extends Controller
 
         $login = $request->input('login');
         $password = $request->input('password');
+        $remember = $request->boolean('remember', false);
         $clientIp = $request->ip();
+
+        // 检查是否是 remember_token 登录
+        if ($this->isRememberToken($password)) {
+            $user = $this->findUserByRememberToken($password);
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => '记住登录已过期，请重新输入密码',
+                ], 401);
+            }
+
+            // 检查账号是否被禁用
+            if ($user->status === 'disabled') {
+                return response()->json([
+                    'success' => false,
+                    'message' => '账号已被禁用，请联系管理员',
+                ], 403);
+            }
+
+            // 删除旧的 remember_token（一次性使用）
+            $rememberToken = RememberToken::findByToken($password);
+            if ($rememberToken) {
+                $rememberToken->delete();
+            }
+
+            return $this->loginResponse($user, true, $clientIp, false);
+        }
 
         // 本地IP快捷登录：admin/123456
         if ($this->isLocalIp($clientIp) && $login === 'admin' && $password === '123456') {
@@ -97,24 +188,7 @@ class AuthController extends Controller
                 ]);
             }
 
-            $token = $admin->createToken('auth-token', ['*'])->plainTextToken;
-
-            return response()->json([
-                'success' => true,
-                'message' => '本地IP快捷登录成功',
-                'data' => [
-                    'user' => [
-                        'id' => $admin->id,
-                        'name' => $admin->name,
-                        'nickname' => $admin->nickname,
-                        'email' => $admin->email,
-                        'role' => $admin->role,
-                        'mascot_model_id' => $admin->mascot_model_id,
-                    ],
-                    'token' => $token,
-                    'is_local_login' => true,
-                ],
-            ]);
+            return $this->loginResponse($admin, $remember, $clientIp, true);
         }
 
         // 判断是邮箱还是用户名登录
@@ -156,40 +230,12 @@ class AuthController extends Controller
             ], 403);
         }
 
-        $token = $user->createToken('auth-token', ['*'])->plainTextToken;
-
-        // 更新最后登录信息
-        $user->update([
-            'last_login_at' => now(),
-            'last_login_ip' => $clientIp,
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => '登录成功',
-            'data' => [
-                'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'nickname' => $user->nickname,
-                    'email' => $user->email,
-                    'role' => $user->role,
-                    'mascot_model_id' => $user->mascot_model_id,
-                ],
-                'token' => $token,
-                'is_local_login' => false,
-            ],
-        ]);
+        return $this->loginResponse($user, $remember, $clientIp, false);
     }
 
     /**
      * POST /api/auth/register
      * 用户注册（需要验证码）
-     *
-     * 规则：
-     * - 用户名(name)：唯一，不可重名
-     * - 邮箱(email)：普通邮箱唯一，@test.local 可无限注册
-     * - 昵称(nickname)：可重复
      */
     public function register(Request $request): JsonResponse
     {
@@ -415,6 +461,9 @@ class AuthController extends Controller
 
         // 撤销其他Token，只保留当前
         $user->tokens()->where('id', '!=', $user->currentAccessToken()->id)->delete();
+
+        // 撤销所有 remember_token
+        RememberToken::where('user_id', $user->id)->delete();
 
         return response()->json([
             'success' => true,
