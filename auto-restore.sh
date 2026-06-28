@@ -68,8 +68,12 @@ log "当前智能体数量: $AGENT_COUNT"
 LOG_COUNT=$(php artisan tinker --execute="echo App\Models\ExecutionLog::count();" 2>/dev/null | tail -1)
 log "当前执行日志数量: $LOG_COUNT"
 
-# 如果智能体为空或执行日志为空，执行恢复
-if [ "$AGENT_COUNT" = "0" ] || [ "$LOG_COUNT" = "0" ]; then
+# 检查图谱节点数量
+GRAPH_COUNT=$(php artisan tinker --execute="echo App\Models\GraphNode::count();" 2>/dev/null | tail -1)
+log "当前图谱节点数量: $GRAPH_COUNT"
+
+# 如果智能体为空、执行日志为空或图谱为空，执行恢复
+if [ "$AGENT_COUNT" = "0" ] || [ "$LOG_COUNT" = "0" ] || [ "$GRAPH_COUNT" = "0" ]; then
     warn "检测到数据丢失，开始恢复..."
     
     # 1. 运行 Seeder 恢复智能体
@@ -77,17 +81,23 @@ if [ "$AGENT_COUNT" = "0" ] || [ "$LOG_COUNT" = "0" ]; then
     php artisan db:seed --class=AgentSeeder --force 2>&1 | tee -a "$LOG_FILE"
     success "智能体恢复完成"
     
+    # 2. 运行 GraphSeeder 恢复图谱
+    log "恢复图谱数据..."
+    php artisan db:seed --class=GraphSeeder --force 2>&1 | tee -a "$LOG_FILE"
+    success "图谱数据恢复完成"
+    
     # 2. 导入历史报告
     log "导入历史报告..."
     php /home/cheng/projects/agent-monitor/scripts/import_reports.php 2>&1 | tee -a "$LOG_FILE"
     
     success "历史报告导入完成"
     
-    # 3. 验证恢复结果
-    FINAL_COUNT=$(php artisan tinker --execute="echo App\Models\Agent::count();" 2>/dev/null | tail -1)
-    LOG_COUNT=$(php artisan tinker --execute="echo App\Models\ExecutionLog::count();" 2>/dev/null | tail -1)
+    # 验证恢复结果
+    FINAL_AGENT=$(php artisan tinker --execute="echo App\Models\Agent::count();" 2>/dev/null | tail -1)
+    FINAL_LOG=$(php artisan tinker --execute="echo App\Models\ExecutionLog::count();" 2>/dev/null | tail -1)
+    FINAL_GRAPH=$(php artisan tinker --execute="echo App\Models\GraphNode::count();" 2>/dev/null | tail -1)
     
-    success "恢复完成！智能体: $FINAL_COUNT 个，执行日志: $LOG_COUNT 条"
+    success "恢复完成！智能体: $FINAL_AGENT 个，执行日志: $FINAL_LOG 条，图谱节点: $FINAL_GRAPH 个"
 else
     success "数据正常，无需恢复"
 fi
