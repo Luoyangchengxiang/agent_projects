@@ -57,18 +57,18 @@ class RagService
         // 2. 加载知识库
         $kb = $this->loadKnowledgeBase();
         if (!$kb || empty($kb['chunks'])) {
-            return $this->fallbackResponse();
+            return $this->fallbackResponse($question);
         }
 
         // 3. 向量检索
         $questionEmbedding = $this->getEmbedding($question);
         if (!$questionEmbedding) {
-            return $this->fallbackResponse();
+            return $this->fallbackResponse($question);
         }
 
         $results = $this->search($questionEmbedding, $kb['chunks'], 3);
         if (empty($results)) {
-            return $this->fallbackResponse();
+            return $this->fallbackResponse($question);
         }
 
         $topResult = $results[0];
@@ -79,6 +79,14 @@ class RagService
             // 高相似度：用 LLM 基于文档生成回答
             $llmAnswer = $this->askLlm($question, $results);
             $content = $llmAnswer ?? $this->formatAnswer($topResult);
+            // 过滤代码块
+            $content = $this->filterCodeBlocks($content);
+            
+            // 如果过滤后内容太短，使用FAQ回答
+            if (mb_strlen($content) < 20) {
+                return $this->fallbackResponse($question);
+            }
+            
             $response = [
                 'type' => 'answer',
                 'content' => $content,
@@ -96,6 +104,14 @@ class RagService
             // 中相似度：LLM 尝试综合多篇文档回答
             $llmAnswer = $this->askLlm($question, $results);
             if ($llmAnswer) {
+                // 过滤代码块
+                $llmAnswer = $this->filterCodeBlocks($llmAnswer);
+                
+                // 如果过滤后内容太短，使用FAQ回答
+                if (mb_strlen($llmAnswer) < 20) {
+                    return $this->fallbackResponse($question);
+                }
+                
                 $response = [
                     'type' => 'answer',
                     'content' => $llmAnswer,
@@ -122,7 +138,7 @@ class RagService
         }
 
         // 低相似度：兜底
-        return $this->fallbackResponse();
+        return $this->fallbackResponse($question);
     }
 
     /**
@@ -182,8 +198,24 @@ PROMPT;
     /**
      * 兜底回复（含常见问题）
      */
-    private function fallbackResponse(): array
+    private function fallbackResponse(string $question = ''): array
     {
+        // 检查问题是否匹配FAQ
+        if (!empty($question)) {
+            foreach ($this->faq as $item) {
+                // 检查问题是否包含FAQ关键词
+                if (str_contains($question, $item['q']) || 
+                    str_contains($item['q'], $question) ||
+                    similar_text($question, $item['q']) / max(strlen($question), strlen($item['q'])) > 0.6) {
+                    return [
+                        'type' => 'faq',
+                        'content' => $item['a'],
+                        'faq' => $this->faq,
+                    ];
+                }
+            }
+        }
+        
         $faqText = "🤔 抱歉，我暂时无法理解你的问题。\n\n";
         $faqText .= "📌 **常见问题：**\n";
         foreach ($this->faq as $i => $item) {
@@ -206,6 +238,27 @@ PROMPT;
         $text = $result['text'];
         $text = preg_replace('/^#{1,3}\s+/m', '📌 ', $text);
         return $text;
+    }
+
+    /**
+     * 过滤代码块，用项目符号列表代替
+     */
+    private function filterCodeBlocks(string $content): string
+    {
+        // 移除代码块（```...```）
+        $content = preg_replace('/```[\s\S]*?```/', '', $content);
+        
+        // 移除行内代码块（`...`）但保留内容
+        $content = preg_replace('/`([^`]+)`/', '$1', $content);
+        
+        // 移除文件路径和文件结构
+        $content = preg_replace('/[a-zA-Z]:\\\\[^\n]+/', '', $content);
+        $content = preg_replace('/\/[a-zA-Z_][a-zA-Z0-9_\/]*\.[a-zA-Z]+/', '', $content);
+        
+        // 移除多余的空行
+        $content = preg_replace('/\n{3,}/', "\n\n", $content);
+        
+        return trim($content);
     }
 
     /**
