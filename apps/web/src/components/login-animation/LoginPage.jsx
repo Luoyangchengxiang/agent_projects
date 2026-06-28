@@ -1,5 +1,6 @@
-import { useState, useRef, forwardRef, useImperativeHandle } from 'react'
+import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { Eye, EyeOff, Mail, Sparkles } from 'lucide-react'
+import { tokenManager } from '../../services/tokenManager'
 import AnimatedCharacters from './AnimatedCharacters'
 import './login.css'
 
@@ -34,6 +35,16 @@ const LoginPage = forwardRef(function LoginPage({
   const [loading, setLoading] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
 
+  // 初始化时检查是否有记住的登录信息
+  useEffect(() => {
+    const remembered = tokenManager.getRemember()
+    if (remembered) {
+      setLogin(remembered.login)
+      setPassword(remembered.password)
+      setRemember(true)
+    }
+  }, [])
+
   // 暴露给父组件的方法
   useImperativeHandle(ref, () => ({
     setError: (msg) => setErrorMsg(msg),
@@ -43,6 +54,14 @@ const LoginPage = forwardRef(function LoginPage({
   const handleSubmit = (e) => {
     e.preventDefault()
     setErrorMsg('')
+
+    // 处理记住密码
+    if (remember) {
+      tokenManager.saveRemember(login, password)
+    } else {
+      tokenManager.clearRemember()
+    }
+
     onSubmit?.({ login, password, remember })
   }
 
