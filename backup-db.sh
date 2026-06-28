@@ -44,6 +44,19 @@ do_restore() {
         return 0
     fi
     
+    # 检查备份文件大小（小于 100 字节可能是空的或损坏的）
+    local file_size=$(stat -c%s "$latest" 2>/dev/null || echo 0)
+    if [ "$file_size" -lt 100 ]; then
+        echo "⚠️  备份文件太小 ($file_size 字节)，可能是空的，跳过恢复"
+        return 0
+    fi
+    
+    # 检查备份是否包含 agents 数据
+    if ! gunzip -c "$latest" 2>/dev/null | grep -q "COPY public.agents" 2>/dev/null; then
+        echo "⚠️  备份文件可能不完整，跳过恢复"
+        return 0
+    fi
+    
     local size=$(du -h "$latest" | cut -f1)
     local time=$(stat -c %y "$latest" 2>/dev/null | cut -d. -f1)
     echo "📥 从备份恢复: $(basename $latest) ($size, $time)"
