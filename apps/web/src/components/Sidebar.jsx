@@ -71,8 +71,8 @@ function Sidebar() {
             className={({ isActive }) =>
               `flex items-center gap-2 px-3 py-2 rounded-md mb-0.5 transition-all duration-200 ${
                 isActive
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-secondary hover:text-primary hover:bg-surface'
+                  ? 'bg-primary/20 text-primary font-semibold border-l-2 border-primary'
+                  : 'text-secondary hover:text-primary hover:bg-surface/50'
               }`
             }
           >
