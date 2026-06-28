@@ -74,10 +74,19 @@ function ExecutionLogs() {
       width: 80
     },
     {
-      title: 'Agent',
-      dataIndex: ['agent', 'name'],
-      key: 'agent_name',
-      render: (text) => <span className="text-primary font-medium">{text}</span>
+      title: '执行者',
+      key: 'executor',
+      render: (_, record) => {
+        // 优先显示具体智能体名称，否则显示团队名称
+        const name = record.agent?.name || record.agent_group || '未知'
+        const isTeam = !record.agent && record.agent_group
+        return (
+          <span className="text-primary font-medium">
+            {isTeam && <Tag color="blue" className="mr-1">团队</Tag>}
+            {name}
+          </span>
+        )
+      }
     },
     {
       title: '任务ID',
