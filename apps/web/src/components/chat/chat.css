@@ -379,6 +379,111 @@
   line-height: 1.6;
 }
 
+/* Markdown 内容样式 */
+.chat-msg-content h1,
+.chat-msg-content h2,
+.chat-msg-content h3,
+.chat-msg-content h4,
+.chat-msg-content h5,
+.chat-msg-content h6 {
+  margin: 8px 0 4px 0;
+  font-weight: 600;
+  color: #fff;
+}
+
+.chat-msg-content h1 { font-size: 1.2em; }
+.chat-msg-content h2 { font-size: 1.1em; }
+.chat-msg-content h3 { font-size: 1em; }
+
+.chat-msg-content p {
+  margin: 4px 0;
+}
+
+.chat-msg-content ul,
+.chat-msg-content ol {
+  margin: 4px 0;
+  padding-left: 20px;
+}
+
+.chat-msg-content li {
+  margin: 2px 0;
+}
+
+.chat-msg-content blockquote {
+  margin: 4px 0;
+  padding: 4px 8px;
+  border-left: 3px solid rgba(108, 63, 245, 0.5);
+  background: rgba(108, 63, 245, 0.1);
+  border-radius: 4px;
+}
+
+.chat-msg-content hr {
+  margin: 8px 0;
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.chat-msg-content table {
+  margin: 4px 0;
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.chat-msg-content th,
+.chat-msg-content td {
+  padding: 4px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: left;
+}
+
+.chat-msg-content th {
+  background: rgba(255, 255, 255, 0.05);
+  font-weight: 600;
+}
+
+/* 内联代码 */
+.chat-inline-code {
+  padding: 1px 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.9em;
+  color: #e6db74;
+}
+
+/* 代码块（简化显示） */
+.chat-code-block {
+  display: inline;
+  padding: 1px 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.85em;
+  color: #a6e22e;
+  word-break: break-all;
+}
+
+/* 强调文本 */
+.chat-msg-content strong {
+  color: #fff;
+  font-weight: 600;
+}
+
+.chat-msg-content em {
+  color: #ccc;
+  font-style: italic;
+}
+
+/* 链接 */
+.chat-msg-content a {
+  color: #6c3ff5;
+  text-decoration: none;
+}
+
+.chat-msg-content a:hover {
+  text-decoration: underline;
+}
+
 /* 发送失败消息 */
 .chat-msg-failed {
   display: flex;

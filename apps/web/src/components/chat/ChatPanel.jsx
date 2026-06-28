@@ -7,6 +7,8 @@ import {
   SendOutlined, CloseOutlined, RobotOutlined, UserOutlined, 
   CustomerServiceOutlined, ReloadOutlined, ExclamationCircleOutlined 
 } from '@ant-design/icons'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import useChatStore from '../../stores/chatStore'
 import './chat.css'
 
@@ -130,12 +132,34 @@ export default function ChatPanel({ embedded = false, onClose }) {
                   <div className="chat-system-msg">{msg.content}</div>
                 ) : (
                   <div className="chat-msg-content">
-                    {msg.content.split('\n').map((line, i) => (
-                      <span key={i}>
-                        {line.startsWith('📌') ? <strong>{line}</strong> : line}
-                        {i < msg.content.split('\n').length - 1 && <br />}
-                      </span>
-                    ))}
+                    {msg.sender_type === 'ai' ? (
+                      <ReactMarkdown 
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          // 禁用代码块渲染，改为内联显示
+                          code: ({node, inline, className, children, ...props}) => {
+                            if (inline) {
+                              return <code className="chat-inline-code" {...props}>{children}</code>
+                            }
+                            // 代码块只显示内容，不显示语法高亮
+                            return <span className="chat-code-block">{children}</span>
+                          },
+                          // 禁用图片渲染
+                          img: () => null,
+                          // 链接在新窗口打开
+                          a: ({node, ...props}) => <a target="_blank" rel="noopener noreferrer" {...props} />
+                        }}
+                      >
+                        {msg.content}
+                      </ReactMarkdown>
+                    ) : (
+                      msg.content.split('\n').map((line, i) => (
+                        <span key={i}>
+                          {line.startsWith('📌') ? <strong>{line}</strong> : line}
+                          {i < msg.content.split('\n').length - 1 && <br />}
+                        </span>
+                      ))
+                    )}
                   </div>
                 )}
 
