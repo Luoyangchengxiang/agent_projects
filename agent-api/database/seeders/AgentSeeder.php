@@ -25,21 +25,8 @@ class AgentSeeder extends Seeder
             );
 
             // 只在没有日志时才创建（避免重复）
-            if ($agent->executionLogs()->count() === 0) {
-                $statuses = ['success', 'success', 'success', 'failed', 'success'];
-                foreach ($statuses as $i => $status) {
-                    ExecutionLog::create([
-                        'agent_id' => $agent->id,
-                        'task_id' => 'task_' . str_pad($i + 1, 3, '0', STR_PAD_LEFT),
-                        'status' => $status,
-                        'input' => '分析热销商品数据',
-                        'output' => $status === 'success' ? '分析完成，生成报告' : null,
-                        'duration' => rand(1000, 5000),
-                        'error' => $status === 'failed' ? 'API调用超时' : null,
-                        'created_at' => now()->subHours(rand(1, 48)),
-                    ]);
-                }
-            }
+            // 注意：不再创建写死的测试数据，执行日志应由真实任务生成
+            // 如需测试数据，请手动触发定时任务或导入历史报告
         }
     }
 }

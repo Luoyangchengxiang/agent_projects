@@ -80,8 +80,27 @@ function createTestStore() {
           return { messages: msgs, isSending: false, conversation: { ...s.conversation, mode: result.mode } }
         })
       } catch (error) {
+        // 发送失败：显示 fallback 常见问题列表
+        const fallbackMsg = {
+          id: Date.now(),
+          sender_type: 'ai',
+          content: '🤔 抱歉，网络连接出现问题，暂时无法回答你的问题。\n\n📌 **常见问题：**\n1. 如何添加新的 Agent？\n2. 怎么查看 Agent 运行是否正常？\n3. 本地怎么快速登录？\n4. 报错了怎么办？\n5. 如何查看执行日志？\n6. 如何配置定时任务？\n\n💬 你也可以点击下方按钮转接人工客服。',
+          created_at: new Date().toISOString(),
+          metadata: {
+            faq: [
+              { q: '如何添加新的 Agent？', a: '在"Agent列表"页面点击"新增"按钮即可创建。' },
+              { q: '怎么查看 Agent 运行是否正常？', a: '在"仪表盘"页面可以查看所有 Agent 的运行状态，绿色表示正常。' },
+              { q: '本地怎么快速登录？', a: '在本机访问时，用户名输入"admin"，密码输入"123456"即可快捷登录。' },
+              { q: '报错了怎么办？', a: '在"错误日志"页面查看错误详情，可以按类型和严重程度筛选。' },
+              { q: '如何查看执行日志？', a: '点击左侧菜单"执行日志"即可查看所有 Agent 的执行历史。' },
+              { q: '如何配置定时任务？', a: '在"定时任务"页面可以创建、编辑和管理定时任务。' },
+            ],
+            _isFallback: true,
+          },
+        }
+
         set((s) => ({
-          messages: s.messages.filter((m) => m.id !== tempUserMsg.id),
+          messages: [...s.messages.filter((m) => m.id !== tempUserMsg.id), fallbackMsg],
           isSending: false,
           error: error.message,
         }))
@@ -185,13 +204,18 @@ describe('chatStore', () => {
       expect(useChatStore.getState().isSending).toBe(false)
     })
 
-    it('发送失败时移除临时消息并设置错误', async () => {
-      chatService.sendMessage.mockRejectedValue(new Error('发送失败'))
+    it('发送失败时显示 fallback 常见问题列表', async () => {
+      chatService.sendMessage.mockRejectedValue(new Error('网络超时'))
 
       await useChatStore.getState().sendMessage('测试消息')
 
-      expect(useChatStore.getState().messages).toHaveLength(0)
-      expect(useChatStore.getState().error).toBe('发送失败')
+      const messages = useChatStore.getState().messages
+      expect(messages).toHaveLength(1)
+      expect(messages[0].sender_type).toBe('ai')
+      expect(messages[0].content).toContain('常见问题')
+      expect(messages[0].metadata.faq).toHaveLength(6)
+      expect(messages[0].metadata._isFallback).toBe(true)
+      expect(useChatStore.getState().error).toBe('网络超时')
       expect(useChatStore.getState().isSending).toBe(false)
     })
 

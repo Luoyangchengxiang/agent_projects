@@ -20,6 +20,10 @@ class RagService
     private float $highThreshold = 0.6;
     private float $lowThreshold = 0.4;
 
+    // 缓存配置
+    private int $cacheTtl = 3600; // 缓存1小时
+    private string $cachePrefix = 'rag_answer_';
+
     // 预设常见问题
     private array $faq = [
         ['q' => '如何添加新的 Agent？', 'a' => '在"Agent列表"页面点击"新增"按钮即可创建。'],
@@ -42,13 +46,21 @@ class RagService
      */
     public function answer(string $question): array
     {
-        // 1. 加载知识库
+        // 1. 检查缓存
+        $cacheKey = $this->cachePrefix . md5($question);
+        $cached = cache()->get($cacheKey);
+        if ($cached) {
+            Log::info('RAG 缓存命中', ['question' => $question]);
+            return $cached;
+        }
+
+        // 2. 加载知识库
         $kb = $this->loadKnowledgeBase();
         if (!$kb || empty($kb['chunks'])) {
             return $this->fallbackResponse();
         }
 
-        // 2. 向量检索
+        // 3. 向量检索
         $questionEmbedding = $this->getEmbedding($question);
         if (!$questionEmbedding) {
             return $this->fallbackResponse();
@@ -62,28 +74,39 @@ class RagService
         $topResult = $results[0];
         $similarity = $topResult['similarity'];
 
-        // 3. 根据相似度分层处理
+        // 4. 根据相似度分层处理
         if ($similarity >= $this->highThreshold) {
             // 高相似度：用 LLM 基于文档生成回答
             $llmAnswer = $this->askLlm($question, $results);
-            return [
+            $content = $llmAnswer ?? $this->formatAnswer($topResult);
+            $response = [
                 'type' => 'answer',
-                'content' => $llmAnswer ?? $this->formatAnswer($topResult),
+                'content' => $content,
                 'source' => $topResult['source'] . ' > ' . $topResult['heading'],
                 'similarity' => $similarity,
             ];
+            
+            // 缓存回答（包括文档原文）
+            cache()->put($cacheKey, $response, $this->cacheTtl);
+            
+            return $response;
         }
 
         if ($similarity >= $this->lowThreshold) {
             // 中相似度：LLM 尝试综合多篇文档回答
             $llmAnswer = $this->askLlm($question, $results);
             if ($llmAnswer) {
-                return [
+                $response = [
                     'type' => 'answer',
                     'content' => $llmAnswer,
                     'source' => $results[0]['source'] . ' > ' . $results[0]['heading'],
                     'similarity' => $similarity,
                 ];
+                
+                // 缓存 LLM 回答
+                cache()->put($cacheKey, $response, $this->cacheTtl);
+                
+                return $response;
             }
 
             // LLM 失败则返回建议列表
@@ -107,64 +130,40 @@ class RagService
      */
     private function askLlm(string $question, array $contextChunks): ?string
     {
-        // 拼接知识库上下文
-        $contextParts = [];
-        foreach (array_slice($contextChunks, 0, 2) as $chunk) {
-            $contextParts[] = "【{$chunk['heading']}】\n{$chunk['text']}";
-        }
-        $context = implode("\n\n---\n\n", $contextParts);
+        // 只取最相关的1个chunk，减少上下文长度
+        $chunk = $contextChunks[0];
+        $context = "【{$chunk['heading']}】\n{$chunk['text']}";
 
-        // 追加 FAQ 作为参考
-        $faqText = '';
-        foreach ($this->faq as $item) {
-            $faqText .= "问：{$item['q']}\n答：{$item['a']}\n\n";
-        }
-
+        // 简化 prompt，减少 token 消耗
         $prompt = <<<PROMPT
-你是 Agent Monitor 系统的智能客服。用户问了一个问题，请根据下面的参考资料用你自己的话简洁回答。
+根据以下资料回答用户问题。用简洁的中文，2-3句话。
 
-规则：
-1. 用自然的中文回答，像朋友聊天一样
-2. 不要复制粘贴参考资料的原文，要用自己的话重新组织
-3. 如果参考资料里没有答案，就说"这个问题我不太确定，建议转交人工客服"
-4. 回答控制在 3-5 句话以内
-5. 不要出现"根据资料""参考资料显示"这类词
+资料：{$context}
 
-参考资料：
-{$context}
+问题：{$question}
 
-常见问题参考：
-{$faqText}
-
-用户问：{$question}
+回答：
 PROMPT;
 
         try {
-            // 使用流式响应，超时 120 秒（CPU 模型慢）
-            $response = Http::timeout(120)->post("{$this->ollamaUrl}/api/generate", [
+            // 使用非流式请求，优化参数，缩短超时
+            $response = Http::timeout(10)->post("{$this->ollamaUrl}/api/generate", [
                 'model' => $this->chatModel,
                 'prompt' => $prompt,
-                'stream' => true,
+                'stream' => false,
                 'options' => [
-                    'temperature' => 0.3,
-                    'num_predict' => 200,
+                    'temperature' => 0.1,
+                    'num_predict' => 100,
+                    'top_k' => 10,
+                    'top_p' => 0.5,
+                    'repeat_penalty' => 1.1,
                 ],
             ]);
 
             if ($response->successful()) {
-                // 流式响应拼接
-                $fullAnswer = '';
-                $lines = explode("\n", $response->body());
-                foreach ($lines as $line) {
-                    if (empty(trim($line))) continue;
-                    $chunk = json_decode($line, true);
-                    if (isset($chunk['response'])) {
-                        $fullAnswer .= $chunk['response'];
-                    }
-                }
-                $fullAnswer = trim($fullAnswer);
-                if (!empty($fullAnswer)) {
-                    return $fullAnswer;
+                $answer = trim($response->json('response', ''));
+                if (!empty($answer)) {
+                    return $answer;
                 }
             }
         } catch (\Exception $e) {
