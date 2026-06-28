@@ -64,8 +64,12 @@ cd "$PROJECT_DIR"
 AGENT_COUNT=$(php artisan tinker --execute="echo App\Models\Agent::count();" 2>/dev/null | tail -1)
 log "当前智能体数量: $AGENT_COUNT"
 
-# 如果智能体为空，执行恢复
-if [ "$AGENT_COUNT" = "0" ]; then
+# 检查执行日志数量
+LOG_COUNT=$(php artisan tinker --execute="echo App\Models\ExecutionLog::count();" 2>/dev/null | tail -1)
+log "当前执行日志数量: $LOG_COUNT"
+
+# 如果智能体为空或执行日志为空，执行恢复
+if [ "$AGENT_COUNT" = "0" ] || [ "$LOG_COUNT" = "0" ]; then
     warn "检测到数据丢失，开始恢复..."
     
     # 1. 运行 Seeder 恢复智能体
@@ -75,56 +79,7 @@ if [ "$AGENT_COUNT" = "0" ]; then
     
     # 2. 导入历史报告
     log "导入历史报告..."
-    php artisan tinker --execute="
-use App\Models\Agent;
-use App\Models\ExecutionLog;
-
-\$agent = Agent::where('name', '选品专家')->first();
-if (!\$agent) {
-    echo '选品专家不存在';
-    exit;
-}
-
-\$reportDir = '/home/cheng/local-ai/agents/开店团队/报告';
-\$files = glob(\$reportDir . '/热销商品调研_*.md');
-
-\$count = 0;
-foreach (\$files as \$file) {
-    \$filename = basename(\$file);
-    preg_match('/(\d{4}-\d{2}-\d{2}|\d{8})/', \$filename, \$matches);
-    \$dateStr = \$matches[1] ?? '';
-    
-    if (strlen(\$dateStr) === 8) {
-        \$date = substr(\$dateStr, 0, 4) . '-' . substr(\$dateStr, 4, 2) . '-' . substr(\$dateStr, 6, 2);
-    } else {
-        \$date = \$dateStr;
-    }
-    
-    \$content = file_get_contents(\$file);
-    \$size = strlen(\$content);
-    
-    \$exists = ExecutionLog::where('agent_id', \$agent->id)
-        ->whereDate('created_at', \$date)
-        ->exists();
-    
-    if (!\$exists) {
-        ExecutionLog::create([
-            'agent_id' => \$agent->id,
-            'task_id' => 'daily_inspection_' . str_replace('-', '', \$date),
-            'status' => 'success',
-            'output' => mb_substr(\$content, 0, 5000),
-            'result_summary' => '热销商品调研报告，大小: ' . round(\$size/1024, 1) . 'KB',
-            'agent_group' => '开店团队',
-            'executor_type' => 'ollama',
-            'created_at' => \$date . ' 09:00:00',
-            'updated_at' => \$date . ' 09:00:00',
-        ]);
-        \$count++;
-    }
-}
-
-echo '导入完成: ' . \$count . ' 条';
-" 2>&1 | tee -a "$LOG_FILE"
+    php /home/cheng/projects/agent-monitor/scripts/import_reports.php 2>&1 | tee -a "$LOG_FILE"
     
     success "历史报告导入完成"
     
