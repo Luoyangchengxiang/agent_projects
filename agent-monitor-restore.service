@@ -1,0 +1,15 @@
+[Unit]
+Description=Agent Monitor Auto Restore
+After=postgresql.service
+Requires=postgresql.service
+
+[Service]
+Type=oneshot
+User=cheng
+Group=cheng
+ExecStart=/home/cheng/projects/agent-monitor/auto-restore.sh
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

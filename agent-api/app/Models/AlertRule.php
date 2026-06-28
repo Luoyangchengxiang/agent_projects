@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 
-class AlertRule extends Model
+class AlertRule extends BaseModel
 {
     protected $fillable = [
         'name',

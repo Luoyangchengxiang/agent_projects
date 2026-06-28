@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ChatMessage extends Model
+class ChatMessage extends BaseModel
 {
     protected $fillable = [
         'conversation_id',

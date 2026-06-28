@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class GraphEdge extends Model
+class GraphEdge extends BaseModel
 {
     protected $fillable = [
         'source_id',

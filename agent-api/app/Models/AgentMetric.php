@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class AgentMetric extends Model
+class AgentMetric extends BaseModel
 {
     protected $fillable = [
         'agent_id',

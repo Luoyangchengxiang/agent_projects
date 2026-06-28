@@ -6,7 +6,7 @@ use App\Enums\ErrorType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 
-class ErrorLog extends Model
+class ErrorLog extends BaseModel
 {
     protected $fillable = [
         'error_type',

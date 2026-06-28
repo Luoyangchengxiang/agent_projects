@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class VersionUpdate extends Model
+class VersionUpdate extends BaseModel
 {
     protected $fillable = [
         'version',

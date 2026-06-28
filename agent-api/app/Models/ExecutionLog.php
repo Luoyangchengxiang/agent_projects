@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ExecutionLog extends Model
+class ExecutionLog extends BaseModel
 {
     protected $fillable = [
         'agent_id',
