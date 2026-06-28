@@ -51,6 +51,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/dashboard/charts', [App\Http\Controllers\Api\DashboardController::class, 'charts']);
     Route::get('/dashboard/result-summaries', [App\Http\Controllers\Api\DashboardController::class, 'resultSummaries']);
     Route::get('/dashboard/agent-groups', [App\Http\Controllers\Api\DashboardController::class, 'agentGroups']);
+    Route::get('/dashboard/system', [App\Http\Controllers\Api\DashboardController::class, 'system']);
 
     // 错误日志（仅管理员）
     Route::middleware('role:admin')->group(function () {

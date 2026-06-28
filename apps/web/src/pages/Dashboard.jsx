@@ -1,19 +1,27 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { 
   RobotOutlined, 
   CheckCircleOutlined, 
   CloseCircleOutlined, 
   ClockCircleOutlined,
-  LoadingOutlined
+  LoadingOutlined,
+  ReloadOutlined
 } from '@ant-design/icons'
 import { dashboardApi } from '@agent-monitor/api'
 
 function Dashboard() {
   const [stats, setStats] = useState(null)
+  const [system, setSystem] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [systemLoading, setSystemLoading] = useState(false)
 
   useEffect(() => {
     loadStats()
+    loadSystem()
+    
+    // 每 10 秒自动刷新系统状态
+    const interval = setInterval(loadSystem, 10000)
+    return () => clearInterval(interval)
   }, [])
 
   const loadStats = async () => {
@@ -27,6 +35,34 @@ function Dashboard() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const loadSystem = useCallback(async () => {
+    try {
+      setSystemLoading(true)
+      const response = await dashboardApi.getSystem()
+      if (response.success) {
+        setSystem(response.data)
+      }
+    } catch (error) {
+      console.error('加载系统状态失败:', error)
+    } finally {
+      setSystemLoading(false)
+    }
+  }, [])
+
+  // 获取使用率颜色
+  const getUsageColor = (usage) => {
+    if (usage >= 90) return 'bg-error'
+    if (usage >= 70) return 'bg-warning'
+    return 'bg-success'
+  }
+
+  // 获取使用率文本颜色
+  const getUsageTextColor = (usage) => {
+    if (usage >= 90) return 'text-error'
+    if (usage >= 70) return 'text-warning'
+    return 'text-success'
   }
 
   const statCards = [
@@ -116,37 +152,97 @@ function Dashboard() {
 
         {/* 系统状态 */}
         <div className="card">
-          <div className="card-header">
+          <div className="card-header flex items-center justify-between">
             <h3 className="text-lg font-semibold text-primary">系统状态</h3>
+            <button 
+              onClick={loadSystem}
+              disabled={systemLoading}
+              className="text-secondary hover:text-primary transition-colors"
+              title="刷新系统状态"
+            >
+              <ReloadOutlined className={systemLoading ? 'animate-spin' : ''} />
+            </button>
           </div>
           <div className="card-body space-y-3">
+            {/* CPU 使用率 */}
             <div className="flex items-center justify-between">
               <span className="text-secondary">CPU使用率</span>
               <div className="flex items-center gap-2">
                 <div className="w-24 h-2 bg-surface rounded-full overflow-hidden">
-                  <div className="w-1/3 h-full bg-primary rounded-full"></div>
+                  <div 
+                    className={`h-full rounded-full transition-all duration-500 ${getUsageColor(system?.cpu?.usage || 0)}`}
+                    style={{ width: `${system?.cpu?.usage || 0}%` }}
+                  ></div>
                 </div>
-                <span className="text-sm text-primary">33%</span>
+                <span className={`text-sm font-medium ${getUsageTextColor(system?.cpu?.usage || 0)}`}>
+                  {system?.cpu?.usage || 0}%
+                </span>
               </div>
             </div>
+            
+            {/* 内存使用率 */}
             <div className="flex items-center justify-between">
               <span className="text-secondary">内存使用率</span>
               <div className="flex items-center gap-2">
                 <div className="w-24 h-2 bg-surface rounded-full overflow-hidden">
-                  <div className="w-1/2 h-full bg-success rounded-full"></div>
+                  <div 
+                    className={`h-full rounded-full transition-all duration-500 ${getUsageColor(system?.memory?.usage || 0)}`}
+                    style={{ width: `${system?.memory?.usage || 0}%` }}
+                  ></div>
                 </div>
-                <span className="text-sm text-primary">50%</span>
+                <span className={`text-sm font-medium ${getUsageTextColor(system?.memory?.usage || 0)}`}>
+                  {system?.memory?.usage || 0}%
+                </span>
               </div>
             </div>
+            
+            {/* 磁盘使用率 */}
             <div className="flex items-center justify-between">
               <span className="text-secondary">磁盘使用率</span>
               <div className="flex items-center gap-2">
                 <div className="w-24 h-2 bg-surface rounded-full overflow-hidden">
-                  <div className="w-1/4 h-full bg-warning rounded-full"></div>
+                  <div 
+                    className={`h-full rounded-full transition-all duration-500 ${getUsageColor(system?.disk?.usage || 0)}`}
+                    style={{ width: `${system?.disk?.usage || 0}%` }}
+                  ></div>
                 </div>
-                <span className="text-sm text-primary">25%</span>
+                <span className={`text-sm font-medium ${getUsageTextColor(system?.disk?.usage || 0)}`}>
+                  {system?.disk?.usage || 0}%
+                </span>
               </div>
             </div>
+
+            {/* 详细信息 */}
+            {system && (
+              <div className="mt-4 pt-4 border-t border-border">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted">CPU核心：</span>
+                    <span className="text-primary ml-1">{system.cpu?.cores || '-'}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted">运行时间：</span>
+                    <span className="text-primary ml-1">{system.uptime || '-'}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted">总内存：</span>
+                    <span className="text-primary ml-1">{system.memory?.total || 0} GB</span>
+                  </div>
+                  <div>
+                    <span className="text-muted">可用内存：</span>
+                    <span className="text-primary ml-1">{system.memory?.free || 0} GB</span>
+                  </div>
+                  <div>
+                    <span className="text-muted">总磁盘：</span>
+                    <span className="text-primary ml-1">{system.disk?.total || 0} GB</span>
+                  </div>
+                  <div>
+                    <span className="text-muted">可用磁盘：</span>
+                    <span className="text-primary ml-1">{system.disk?.free || 0} GB</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

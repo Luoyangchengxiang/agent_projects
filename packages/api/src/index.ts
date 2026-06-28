@@ -171,6 +171,17 @@ export const dashboardApi = {
   // 获取智能体组列表
   getAgentGroups(): Promise<ApiResponse<Array<{ agent_group: string; count: number }>>> {
     return api.get('/dashboard/agent-groups')
+  },
+
+  // 获取系统状态（CPU、内存、磁盘）
+  getSystem(): Promise<ApiResponse<{
+    cpu: { usage: number; cores: number }
+    memory: { total: number; used: number; free: number; usage: number }
+    disk: { total: number; used: number; free: number; usage: number }
+    uptime: string
+    timestamp: string
+  }>> {
+    return api.get('/dashboard/system')
   }
 }
 
