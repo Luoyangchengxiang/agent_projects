@@ -23,7 +23,7 @@ import {
   SearchOutlined,
   FileTextOutlined,
   WarningOutlined,
-  ErrorOutlined,
+  ExclamationCircleOutlined,
   InfoCircleOutlined,
   BugOutlined,
   ClearOutlined,
@@ -258,7 +258,7 @@ function SystemLogs() {
                 title="最近1小时错误"
                 value={stats.last_hour_errors}
                 valueStyle={{ color: '#cf1322' }}
-                prefix={<ErrorOutlined />}
+                prefix={<ExclamationCircleOutlined />}
               />
             </Card>
           </Col>
