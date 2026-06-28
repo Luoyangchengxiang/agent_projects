@@ -4,6 +4,57 @@
 
 ---
 
+## [0.3.3] - 2026-06-28
+
+### ✨ 新功能
+
+- **记住密码功能（多用户独立存储）**
+  - 登录页面新增"记住30天"复选框
+  - 多用户独立存储 remember_token，切换账号时自动填充
+  - 退出登录时保留 remember_token，下次登录自动填充
+  - remember_token 有效期 30 天（可通过 `VITE_REMEMBER_DAYS` 环境变量配置）
+  - 安全设计：前端不存储密码，只存储随机 token
+
+- **后端认证增强**
+  - 新增 `remember_tokens` 数据库表存储用户 remember_token
+  - `RememberToken` 模型管理 token 生命周期（生成、验证、过期）
+  - `AuthController` 支持 remember_token 登录
+  - token 一次性使用：每次登录后更新 token
+
+### 🐛 Bug 修复
+
+- 修复多用户登录时 remember_token 互相覆盖的问题
+- 修复 React 受控输入变为非受控的警告（密码输入框）
+- 修复用户切换时无法自动填充对应账号的 remember_token
+
+### ✅ 测试
+
+- 新增 `tokenManager.test.js` 40 个测试用例
+  - 多用户独立存储测试
+  - 过期时间处理测试
+  - 旧版本数据兼容性测试
+  - 完整用户流程测试
+- 新增 `authService.test.js` 20 个测试用例
+  - 记住密码登录流程测试
+  - 多用户切换测试
+  - 退出登录保留 remember_token 测试
+- 前端 237 个测试用例全部通过
+- 后端 94 个 PHPUnit 测试全部通过
+
+### 🔒 安全
+
+- 前端不存储密码，只存储随机生成的 remember_token
+- remember_token 一次性使用（每次登录后更新）
+- token 有效期限制（默认 30 天）
+- 用户可随时清除 remember_token
+
+### 📚 文档
+
+- 更新 CHANGELOG.md 记录新版本
+- 更新 README.md 添加"记住密码"功能说明
+
+---
+
 ## [0.3.2] - 2026-06-28
 
 ### ✨ 新功能

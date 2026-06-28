@@ -13,17 +13,18 @@ src/__tests__/
 ├── chatStore.test.js
 ├── mascotStore.test.js
 ├── request.test.js         # API 请求
-├── tokenManager.test.js
+├── tokenManager.test.js    # Token管理（含多用户独立存储）
 ├── graphApi.test.js        # API 服务
 ├── cronjobsApi.test.js
 ├── reportsApi.test.js
 ├── versionUpdateApi.test.js
 ├── alertsApi.test.js
 ├── metricsApi.test.js
-├── authService.test.js
+├── authService.test.js     # 认证服务（含记住密码）
 ├── chatService.test.js
 ├── escapeHtml.test.js      # 工具函数
 ├── graphConstants.test.js  # 常量
+├── roleRoute.test.js       # 路由权限
 └── setup.js                # 测试配置
 ```
 
@@ -75,6 +76,63 @@ describe('escapeHtml', () => {
 
   it('null 返回空字符串', () => {
     expect(escapeHtml(null)).toBe('')
+  })
+})
+```
+
+## 编写记住密码功能测试
+
+```javascript
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { tokenManager } from '../services/tokenManager'
+
+describe('tokenManager 记住密码', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('多用户独立存储 remember_token', () => {
+    tokenManager.saveRemember('admin', 'token-admin')
+    tokenManager.saveRemember('test', 'token-test')
+
+    expect(tokenManager.getRemember('admin')).toEqual({ rememberToken: 'token-admin' })
+    expect(tokenManager.getRemember('test')).toEqual({ rememberToken: 'token-test' })
+  })
+
+  it('清除一个用户不影响其他用户', () => {
+    tokenManager.saveRemember('admin', 'token-admin')
+    tokenManager.saveRemember('test', 'token-test')
+
+    tokenManager.clearRemember('admin')
+
+    expect(tokenManager.getRemember('admin')).toBeNull()
+    expect(tokenManager.getRemember('test')).toEqual({ rememberToken: 'token-test' })
+  })
+
+  it('remember_token 过期后返回 null', () => {
+    const now = new Date('2024-01-01T12:00:00Z')
+    vi.setSystemTime(now)
+
+    tokenManager.saveRemember('admin', 'token-admin', 1) // 1天后过期
+
+    // 2天后
+    vi.setSystemTime(new Date('2024-01-03T12:00:00Z'))
+    expect(tokenManager.getRemember('admin')).toBeNull()
+  })
+
+  it('退出登录保留 remember_token', () => {
+    tokenManager.saveRemember('admin', 'token-admin')
+    tokenManager.saveRemember('test', 'token-test')
+
+    tokenManager.clearAuth() // 只清除认证信息
+
+    expect(tokenManager.getRemember('admin')).toEqual({ rememberToken: 'token-admin' })
+    expect(tokenManager.getRemember('test')).toEqual({ rememberToken: 'token-test' })
   })
 })
 ```

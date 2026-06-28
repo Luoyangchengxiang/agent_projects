@@ -35,11 +35,118 @@ describe('authService', () => {
       expect(request.post).toHaveBeenCalledWith('/auth/login', {
         login: 'test@test.com',
         password: 'password123',
+        remember: false,
       })
       expect(result.user).toEqual(mockRes.data.user)
       expect(result.token).toBe('abc123')
       expect(tokenManager.getToken()).toBe('abc123')
       expect(tokenManager.getUser()).toEqual(mockRes.data.user)
+    })
+
+    it('登录时勾选"记住30天"，保存 remember_token', async () => {
+      const mockRes = {
+        data: {
+          user: { id: 1, name: '管理员', email: 'admin@local' },
+          token: 'token-123',
+          remember_token: 'remember-abc',
+          is_local_login: true,
+        },
+      }
+      request.post.mockResolvedValue(mockRes)
+
+      await authService.login('admin', 'password123', true)
+
+      expect(request.post).toHaveBeenCalledWith('/auth/login', {
+        login: 'admin',
+        password: 'password123',
+        remember: true,
+      })
+      expect(tokenManager.getRemember('admin')).toEqual({ rememberToken: 'remember-abc' })
+    })
+
+    it('登录时不勾选"记住30天"，清除该用户的 remember_token', async () => {
+      // 先保存一个 remember_token
+      tokenManager.saveRemember('admin', 'old-remember-token')
+
+      const mockRes = {
+        data: {
+          user: { id: 1, name: '管理员', email: 'admin@local' },
+          token: 'token-123',
+          is_local_login: true,
+        },
+      }
+      request.post.mockResolvedValue(mockRes)
+
+      await authService.login('admin', 'password123', false)
+
+      expect(tokenManager.getRemember('admin')).toBeNull()
+    })
+
+    it('登录时更新 lastLogin', async () => {
+      const mockRes = {
+        data: {
+          user: { id: 1, name: '管理员', email: 'admin@local' },
+          token: 'token-123',
+          remember_token: 'remember-abc',
+          is_local_login: true,
+        },
+      }
+      request.post.mockResolvedValue(mockRes)
+
+      await authService.login('admin', 'password123', true)
+
+      expect(tokenManager.getLastRemembered()?.login).toBe('admin')
+    })
+
+    it('用户A登录后，用户B登录，两个用户的 remember_token 都保留', async () => {
+      // 用户A登录
+      const mockResA = {
+        data: {
+          user: { id: 1, name: '管理员', email: 'admin@local' },
+          token: 'token-admin',
+          remember_token: 'remember-admin',
+          is_local_login: true,
+        },
+      }
+      request.post.mockResolvedValue(mockResA)
+      await authService.login('admin', 'password123', true)
+
+      // 用户B登录
+      const mockResB = {
+        data: {
+          user: { id: 2, name: '测试用户', email: 'test@local' },
+          token: 'token-test',
+          remember_token: 'remember-test',
+          is_local_login: true,
+        },
+      }
+      request.post.mockResolvedValue(mockResB)
+      await authService.login('test', 'password456', true)
+
+      // 两个用户的 remember_token 都保留
+      expect(tokenManager.getRemember('admin')).toEqual({ rememberToken: 'remember-admin' })
+      expect(tokenManager.getRemember('test')).toEqual({ rememberToken: 'remember-test' })
+
+      // lastLogin 是 test
+      expect(tokenManager.getLastRemembered()?.login).toBe('test')
+    })
+
+    it('后端返回 remember_token 时，无论 remember 参数如何都保存', async () => {
+      const mockRes = {
+        data: {
+          user: { id: 1, name: '管理员', email: 'admin@local' },
+          token: 'token-123',
+          remember_token: 'remember-abc',
+          is_local_login: true,
+        },
+      }
+      request.post.mockResolvedValue(mockRes)
+
+      // remember = false，但后端返回了 remember_token
+      await authService.login('admin', 'password123', false)
+
+      // 仍然保存 remember_token
+      expect(tokenManager.getRemember('admin')).toEqual({ rememberToken: 'remember-abc' })
     })
   })
 
@@ -106,6 +213,32 @@ describe('authService', () => {
       expect(tokenManager.getToken()).toBeNull()
       expect(tokenManager.getUser()).toBeNull()
     })
+
+    it('退出登录保留 remember_token', async () => {
+      tokenManager.setToken('token')
+      tokenManager.setUser({ name: 'admin' })
+      tokenManager.saveRemember('admin', 'remember-token')
+      request.post.mockResolvedValue({})
+
+      await authService.logout()
+
+      expect(tokenManager.getToken()).toBeNull()
+      expect(tokenManager.getUser()).toBeNull()
+      expect(tokenManager.getRemember('admin')).toEqual({ rememberToken: 'remember-token' })
+    })
+
+    it('退出登录后，其他用户的 remember_token 不受影响', async () => {
+      tokenManager.setToken('token')
+      tokenManager.setUser({ name: 'test' })
+      tokenManager.saveRemember('admin', 'remember-admin')
+      tokenManager.saveRemember('test', 'remember-test')
+      request.post.mockResolvedValue({})
+
+      await authService.logout()
+
+      expect(tokenManager.getRemember('admin')).toEqual({ rememberToken: 'remember-admin' })
+      expect(tokenManager.getRemember('test')).toEqual({ rememberToken: 'remember-test' })
+    })
   })
 
   describe('updatePassword', () => {
@@ -145,6 +278,118 @@ describe('authService', () => {
 
     it('无缓存返回 null', () => {
       expect(authService.getCachedUser()).toBeNull()
+    })
+  })
+
+  describe('记住密码完整流程', () => {
+    it('用户A记住密码 -> 退出 -> 用户B记住密码 -> 退出 -> 自动填充用户B', async () => {
+      // 1. 用户A登录，勾选"记住30天"
+      const mockResA = {
+        data: {
+          user: { id: 1, name: '管理员', email: 'admin@local' },
+          token: 'token-admin',
+          remember_token: 'remember-admin',
+          is_local_login: true,
+        },
+      }
+      request.post.mockResolvedValue(mockResA)
+      await authService.login('admin', 'password123', true)
+
+      // 2. 退出登录
+      request.post.mockResolvedValue({})
+      await authService.logout()
+
+      // 3. 用户B登录，勾选"记住30天"
+      const mockResB = {
+        data: {
+          user: { id: 2, name: '测试用户', email: 'test@local' },
+          token: 'token-test',
+          remember_token: 'remember-test',
+          is_local_login: true,
+        },
+      }
+      request.post.mockResolvedValue(mockResB)
+      await authService.login('test', 'password456', true)
+
+      // 4. 退出登录
+      await authService.logout()
+
+      // 5. 检查自动填充 - 应该是用户B
+      const lastRemembered = tokenManager.getLastRemembered()
+      expect(lastRemembered?.login).toBe('test')
+      expect(lastRemembered?.rememberToken).toBe('remember-test')
+
+      // 6. 用户A的 remember_token 也保留
+      expect(tokenManager.getRemember('admin')).toEqual({ rememberToken: 'remember-admin' })
+    })
+
+    it('用户A记住密码 -> 用户B不记住 -> 退出 -> 自动填充用户A', async () => {
+      // 1. 用户A登录，勾选"记住30天"
+      const mockResA = {
+        data: {
+          user: { id: 1, name: '管理员', email: 'admin@local' },
+          token: 'token-admin',
+          remember_token: 'remember-admin',
+          is_local_login: true,
+        },
+      }
+      request.post.mockResolvedValue(mockResA)
+      await authService.login('admin', 'password123', true)
+
+      // 2. 用户B登录，不勾选"记住30天"
+      const mockResB = {
+        data: {
+          user: { id: 2, name: '测试用户', email: 'test@local' },
+          token: 'token-test',
+          is_local_login: true,
+        },
+      }
+      request.post.mockResolvedValue(mockResB)
+      await authService.login('test', 'password456', false)
+
+      // 3. 退出登录
+      request.post.mockResolvedValue({})
+      await authService.logout()
+
+      // 4. 检查自动填充 - 用户B没有 remember_token，所以返回 null
+      const lastRemembered = tokenManager.getLastRemembered()
+      expect(lastRemembered).toBeNull()
+
+      // 5. 用户A的 remember_token 保留
+      expect(tokenManager.getRemember('admin')).toEqual({ rememberToken: 'remember-admin' })
+
+      // 6. 用户B没有 remember_token
+      expect(tokenManager.getRemember('test')).toBeNull()
+    })
+
+    it('切换用户时自动更新 lastLogin', async () => {
+      // 1. 用户A登录
+      const mockResA = {
+        data: {
+          user: { id: 1, name: '管理员', email: 'admin@local' },
+          token: 'token-admin',
+          remember_token: 'remember-admin',
+          is_local_login: true,
+        },
+      }
+      request.post.mockResolvedValue(mockResA)
+      await authService.login('admin', 'password123', true)
+
+      expect(tokenManager.getLastRemembered()?.login).toBe('admin')
+
+      // 2. 用户B登录
+      const mockResB = {
+        data: {
+          user: { id: 2, name: '测试用户', email: 'test@local' },
+          token: 'token-test',
+          remember_token: 'remember-test',
+          is_local_login: true,
+        },
+      }
+      request.post.mockResolvedValue(mockResB)
+      await authService.login('test', 'password456', true)
+
+      expect(tokenManager.getLastRemembered()?.login).toBe('test')
     })
   })
 })
