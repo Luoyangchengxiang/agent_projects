@@ -187,7 +187,7 @@ export default function PermissionManagement() {
       key: 'status',
       render: (status) => (
         <Tag color={status === 'active' ? 'success' : 'error'}>
-          {status === 'active' ? '正常' : '禁用'}
+          {status === 'active' ? '正常' : '已禁用'}
         </Tag>
       )
     },
