@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Table, Tag, Select, DatePicker, Space, App, Button, Modal, Tooltip } from 'antd'
-import { LoadingOutlined, EyeOutlined, DownOutlined, UpOutlined, LockOutlined } from '@ant-design/icons'
+import { LoadingOutlined, EyeOutlined, DownOutlined, UpOutlined, LockOutlined, ReloadOutlined } from '@ant-design/icons'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { executionLogApi, permissionApi } from '@agent-monitor/api'
@@ -190,16 +190,27 @@ function ExecutionLogs() {
   return (
     <div>
       {/* 页面标题 */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-primary">执行日志</h1>
-        <p className="text-secondary mt-1">
-          查看所有Agent的执行记录
-          {!canViewFullResult() && (
-            <span className="ml-2 text-yellow-500 text-sm">
-              （当前为普通用户，仅可查看摘要）
-            </span>
-          )}
-        </p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-primary">执行日志</h1>
+          <p className="text-secondary mt-1">
+            查看所有Agent的执行记录
+            {!canViewFullResult() && (
+              <span className="ml-2 text-yellow-500 text-sm">
+                （当前为普通用户，仅可查看摘要）
+              </span>
+            )}
+          </p>
+        </div>
+        <Space>
+          <Button
+            icon={<ReloadOutlined />}
+            loading={loading}
+            onClick={() => loadLogs()}
+          >
+            刷新
+          </Button>
+        </Space>
       </div>
 
       {/* 筛选栏 */}

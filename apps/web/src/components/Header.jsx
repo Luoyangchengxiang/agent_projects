@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { BellOutlined, SearchOutlined, UserOutlined, LogoutOutlined, SettingOutlined, SmileOutlined, CrownOutlined } from '@ant-design/icons'
+import { BellOutlined, UserOutlined, LogoutOutlined, SettingOutlined, SmileOutlined, CrownOutlined } from '@ant-design/icons'
 import { Badge, Dropdown, App, Tag } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import useAuthStore from '../stores/authStore'
@@ -65,17 +65,8 @@ function Header() {
   return (
     <>
       <div className="header flex items-center justify-between px-6">
-        {/* 搜索框 */}
-        <div className="flex-1 max-w-md">
-          <div className="relative">
-            <SearchOutlined className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted" />
-            <input
-              type="text"
-              placeholder="搜索Agent、日志..."
-              className="input pl-10 pr-4 py-2"
-            />
-          </div>
-        </div>
+        {/* 左侧占位 */}
+        <div></div>
 
         {/* 右侧操作区 */}
         <div className="flex items-center gap-4">
