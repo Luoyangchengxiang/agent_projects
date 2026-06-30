@@ -24,6 +24,8 @@ import {
   BarChartOutlined,
 } from '@ant-design/icons'
 import { reportsApi } from '../services/reportsApi'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import dayjs from 'dayjs'
 
 const { RangePicker } = DatePicker
@@ -401,7 +403,8 @@ function Reports() {
               }>
                 {currentReport.type === 'weekly' ? '周报' :
                  currentReport.type === 'monthly' ? '月报' :
-                 currentReport.type === 'selection' ? '选品报告' : '自定义'}
+                 currentReport.type === 'selection' ? '选品报告' :
+                 currentReport.type === 'research' ? '调研报告' : '自定义'}
               </Tag>
             </div>
             
@@ -410,33 +413,43 @@ function Reports() {
               <Text>{dayjs(currentReport.created_at).format('YYYY-MM-DD HH:mm:ss')}</Text>
             </div>
             
-            {currentReport.metadata && (
-              <div style={{ marginBottom: 16 }}>
-                <Text strong>报告周期：</Text>
-                <Text>{currentReport.metadata.start_date} 至 {currentReport.metadata.end_date}</Text>
-              </div>
-            )}
-            
             {currentReport.content && (
               <div style={{ 
                 marginTop: 16, 
                 padding: 16, 
                 background: '#1a1a2e', 
                 borderRadius: 8,
-                maxHeight: 400,
+                maxHeight: 500,
                 overflow: 'auto'
               }}>
-                <pre style={{ 
-                  whiteSpace: 'pre-wrap', 
-                  wordBreak: 'break-word',
-                  margin: 0,
-                  fontFamily: 'monospace',
-                  fontSize: 13,
-                  lineHeight: 1.6,
-                  color: '#e0e0e0'
-                }}>
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    h1: ({node, ...props}) => <h1 style={{ fontSize: 24, fontWeight: 600, color: '#fff', marginBottom: 16, marginTop: 24 }} {...props} />,
+                    h2: ({node, ...props}) => <h2 style={{ fontSize: 20, fontWeight: 600, color: '#fff', marginBottom: 12, marginTop: 20 }} {...props} />,
+                    h3: ({node, ...props}) => <h3 style={{ fontSize: 16, fontWeight: 500, color: '#fff', marginBottom: 8, marginTop: 16 }} {...props} />,
+                    p: ({node, ...props}) => <p style={{ marginBottom: 12, lineHeight: 1.8, color: '#e5e7eb' }} {...props} />,
+                    ul: ({node, ...props}) => <ul style={{ listStyle: 'disc', paddingLeft: 24, marginBottom: 12 }} {...props} />,
+                    ol: ({node, ...props}) => <ol style={{ listStyle: 'decimal', paddingLeft: 24, marginBottom: 12 }} {...props} />,
+                    li: ({node, ...props}) => <li style={{ color: '#e5e7eb', marginBottom: 4 }} {...props} />,
+                    strong: ({node, ...props}) => <strong style={{ fontWeight: 600, color: '#fff' }} {...props} />,
+                    em: ({node, ...props}) => <em style={{ color: '#d1d5db' }} {...props} />,
+                    code: ({node, inline, ...props}) => 
+                      inline 
+                        ? <code style={{ padding: '2px 6px', background: '#374151', borderRadius: 4, fontSize: 13, color: '#34d399', fontFamily: 'monospace' }} {...props} />
+                        : <code style={{ display: 'block', padding: 12, background: '#111827', borderRadius: 6, fontSize: 13, color: '#e5e7eb', fontFamily: 'monospace', overflowX: 'auto' }} {...props} />,
+                    pre: ({node, ...props}) => <pre style={{ marginBottom: 12, borderRadius: 6, overflow: 'hidden' }} {...props} />,
+                    blockquote: ({node, ...props}) => <blockquote style={{ borderLeft: '4px solid #3b82f6', paddingLeft: 16, fontStyle: 'italic', color: '#9ca3af', marginBottom: 12 }} {...props} />,
+                    table: ({node, ...props}) => <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 12 }} {...props} />,
+                    thead: ({node, ...props}) => <thead style={{ background: '#1f2937' }} {...props} />,
+                    th: ({node, ...props}) => <th style={{ padding: '8px 12px', textAlign: 'left', color: '#fff', fontWeight: 500, border: '1px solid #374151' }} {...props} />,
+                    td: ({node, ...props}) => <td style={{ padding: '8px 12px', border: '1px solid #374151', color: '#e5e7eb' }} {...props} />,
+                    hr: ({node, ...props}) => <hr style={{ border: 'none', borderTop: '1px solid #374151', margin: '16px 0' }} {...props} />,
+                    a: ({node, ...props}) => <a style={{ color: '#60a5fa', textDecoration: 'underline' }} {...props} />,
+                  }}
+                >
                   {currentReport.content}
-                </pre>
+                </ReactMarkdown>
               </div>
             )}
           </div>
