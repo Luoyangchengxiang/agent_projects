@@ -134,13 +134,19 @@ function Reports() {
   // 下载报告
   const handleDownload = async (record) => {
     try {
-      const res = await reportsApi.download(record.id)
+      // 注意：响应拦截器返回的是 data（Blob），不是完整的 response
+      const blob = await reportsApi.download(record.id)
+      
+      // 确定文件名和扩展名
+      const isMarkdown = record.format === 'markdown' || record.file_path?.endsWith('.md')
+      const defaultFilename = isMarkdown ? `report_${record.id}.md` : `report_${record.id}.csv`
+      const filename = record.file_path ? record.file_path.split('/').pop() : defaultFilename
       
       // 创建下载链接
-      const url = window.URL.createObjectURL(new Blob([res.data]))
+      const url = window.URL.createObjectURL(new Blob([blob]))
       const link = document.createElement('a')
       link.href = url
-      link.setAttribute('download', record.file_path ? record.file_path.split('/').pop() : `report_${record.id}.csv`)
+      link.setAttribute('download', filename)
       document.body.appendChild(link)
       link.click()
       link.remove()
@@ -373,7 +379,7 @@ function Reports() {
               setDetailModalVisible(false)
             }}
           >
-            下载 CSV
+            下载
           </Button>,
           <Button
             key="close"
