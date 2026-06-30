@@ -36,6 +36,11 @@ export default function Settings() {
   const isAdmin = user?.role === 'admin'
   const currentModel = models.find(m => m.id === modelId)
 
+  // 进入设置页面时刷新用户信息（获取最新的status、last_login_at等）
+  useEffect(() => {
+    refreshUser()
+  }, [])
+
   // 加载系统设置（仅管理员）
   useEffect(() => {
     if (isAdmin) loadSystemSettings()
