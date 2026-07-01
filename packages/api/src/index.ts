@@ -80,9 +80,19 @@ export const agentApi = {
     return api.put(`/agents/${id}`, data)
   },
 
-  // 删除Agent
+  // 删除Agent（逻辑删除）
   delete(id: number): Promise<ApiResponse<void>> {
     return api.delete(`/agents/${id}`)
+  },
+
+  // 恢复已删除的Agent
+  restore(id: number): Promise<ApiResponse<void>> {
+    return api.post(`/agents/${id}/restore`)
+  },
+
+  // 获取已删除的Agent列表（回收站）
+  getTrash(): Promise<ApiResponse<PaginatedResponse<Agent>>> {
+    return api.get('/agents-trash')
   },
 
   // 执行Agent任务
@@ -97,7 +107,7 @@ export const agentApi = {
     created_at: string
   }>> {
     return api.post(`/agents/${id}/run`, data)
-  }
+  },
 }
 
 // 执行日志相关API

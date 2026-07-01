@@ -10,13 +10,13 @@ import {
   CaretRightOutlined,
   LoadingOutlined,
   CheckCircleOutlined,
-  CloseCircleOutlined
+  CloseCircleOutlined,
+  UndoOutlined,
+  TeamOutlined,
+  UserOutlined
 } from '@ant-design/icons'
-import { Table, Tag, Button, Input, Space, App, Modal, Form, Select, Tooltip } from 'antd'
+import { Table, Tag, Button, Input, Space, App, Modal, Form, Select, Tooltip, Badge } from 'antd'
 import { agentApi } from '@agent-monitor/api'
-
-// 受保护的 Agent ID（开店团队及其成员，不可编辑/删除）
-const PROTECTED_IDS = [1, 2, 3, 4, 5, 7]
 
 function AgentList() {
   const { message, modal } = App.useApp()
@@ -24,11 +24,8 @@ function AgentList() {
   const [loading, setLoading] = useState(true)
   const [searchText, setSearchText] = useState('')
   const [statusFilter, setStatusFilter] = useState(null)
-  const [pagination, setPagination] = useState({
-    current: 1,
-    pageSize: 10,
-    total: 0
-  })
+  const [showTrash, setShowTrash] = useState(false)
+  const [userRole, setUserRole] = useState('user')
 
   // 弹框状态
   const [viewVisible, setViewVisible] = useState(false)
@@ -46,25 +43,32 @@ function AgentList() {
   const [runResult, setRunResult] = useState(null)
 
   useEffect(() => {
+    // 获取用户角色
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    setUserRole(user.role || 'user')
     loadAgents()
-  }, [pagination.current, pagination.pageSize, statusFilter])
+  }, [statusFilter, showTrash])
 
   const loadAgents = async () => {
     setLoading(true)
     try {
-      const response = await agentApi.getList({
-        page: pagination.current,
-        per_page: pagination.pageSize,
-        search: searchText || undefined,
-        status: statusFilter || undefined
-      })
-      
-      if (response.success) {
-        setAgents(response.data.data)
-        setPagination({
-          ...pagination,
-          total: response.data.total
+      if (showTrash) {
+        // 加载已删除的
+        const response = await agentApi.getTrash()
+        if (response.success) {
+          setAgents(response.data.data || [])
+        }
+      } else {
+        // 加载树状结构
+        const response = await agentApi.getList({
+          tree: true,
+          search: searchText || undefined,
+          status: statusFilter || undefined
         })
+        
+        if (response.success) {
+          setAgents(response.data || [])
+        }
       }
     } catch (error) {
       console.error('加载Agent列表失败:', error)
@@ -72,6 +76,11 @@ function AgentList() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // 搜索
+  const handleSearch = () => {
+    loadAgents()
   }
 
   // 查看详情
@@ -82,16 +91,12 @@ function AgentList() {
 
   // 编辑
   const handleEdit = (record) => {
-    if (PROTECTED_IDS.includes(record.id)) {
-      message.warning('系统内置Agent不可编辑')
-      return
-    }
     setCurrentAgent(record)
     form.setFieldsValue({
       name: record.name,
       type: record.type,
-      model: record.config?.model || '',
-      prompt: record.config?.prompt || '',
+      model: record.model || record.config?.model || '',
+      prompt: record.system_prompt || record.config?.prompt || '',
     })
     setEditVisible(true)
   }
@@ -104,10 +109,8 @@ function AgentList() {
       await agentApi.update(currentAgent.id, {
         name: values.name,
         type: values.type,
-        config: {
-          model: values.model,
-          prompt: values.prompt,
-        }
+        model: values.model,
+        system_prompt: values.prompt,
       })
       message.success('更新成功')
       setEditVisible(false)
@@ -128,10 +131,9 @@ function AgentList() {
       await agentApi.create({
         name: values.name,
         type: values.type,
-        config: {
-          model: values.model,
-          prompt: values.prompt,
-        }
+        parent_id: values.parent_id || null,
+        model: values.model,
+        system_prompt: values.prompt,
       })
       message.success('创建成功')
       setCreateVisible(false)
@@ -145,16 +147,17 @@ function AgentList() {
     }
   }
 
-  // 删除
+  // 逻辑删除
   const handleDelete = (record) => {
-    if (PROTECTED_IDS.includes(record.id)) {
-      message.warning('系统内置Agent不可删除')
-      return
-    }
+    const isGroup = record.is_group
+    const content = isGroup 
+      ? `确定要删除团队「${record.name}」及其所有成员吗？删除后可在回收站恢复。`
+      : `确定要删除 Agent「${record.name}」吗？删除后可在回收站恢复。`
+    
     modal.confirm({
       title: '确认删除',
       icon: <ExclamationCircleOutlined />,
-      content: `确定要删除 Agent「${record.name}」吗？此操作不可恢复。`,
+      content,
       okText: '删除',
       okType: 'danger',
       cancelText: '取消',
@@ -164,7 +167,35 @@ function AgentList() {
           message.success('删除成功')
           loadAgents()
         } catch (error) {
-          message.error('删除失败')
+          if (error.status === 403) {
+            message.error('无权删除此Agent')
+          } else {
+            message.error('删除失败')
+          }
+        }
+      }
+    })
+  }
+
+  // 恢复删除
+  const handleRestore = (record) => {
+    modal.confirm({
+      title: '确认恢复',
+      icon: <ExclamationCircleOutlined />,
+      content: `确定要恢复「${record.name}」吗？`,
+      okText: '恢复',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await agentApi.restore(record.id)
+          message.success('恢复成功')
+          loadAgents()
+        } catch (error) {
+          if (error.status === 403) {
+            message.error('只有管理员可以恢复')
+          } else {
+            message.error('恢复失败')
+          }
         }
       }
     })
@@ -194,7 +225,7 @@ function AgentList() {
       } else {
         message.warning('执行完成但有错误')
       }
-      loadAgents() // 刷新状态
+      loadAgents()
     } catch (error) {
       setRunResult(error?.data || { status: 'failed', error: '请求失败' })
       message.error('执行失败')
@@ -210,52 +241,45 @@ function AgentList() {
     return d.toLocaleDateString('zh-CN') + ' ' + d.toLocaleTimeString('zh-CN', { hour12: false })
   }
 
+  // 判断是否可以删除/编辑
+  const canModify = (record) => {
+    if (userRole === 'admin') return true
+    // 普通用户只能删除自己创建的
+    return record.created_by && record.created_by === JSON.parse(localStorage.getItem('user') || '{}').id
+  }
+
+  // 树状表格列定义
   const columns = [
-    {
-      title: 'ID',
-      dataIndex: 'id',
-      key: 'id',
-      width: 60
-    },
     {
       title: '名称',
       dataIndex: 'name',
       key: 'name',
-      render: (text, record) => (
-        <span className="text-primary font-medium">
-          {text}
-          {PROTECTED_IDS.includes(record.id) && (
-            <Tooltip title="系统内置，不可编辑">
-              <LockOutlined style={{ marginLeft: 6, color: '#f59e0b', fontSize: 12 }} />
-            </Tooltip>
-          )}
-        </span>
-      )
+      render: (text, record) => {
+        const isGroup = record.is_group || record.children
+        return (
+          <span className="font-medium">
+            {isGroup ? (
+              <TeamOutlined style={{ marginRight: 8, color: '#722ed1' }} />
+            ) : (
+              <UserOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+            )}
+            {text}
+          </span>
+        )
+      }
     },
     {
       title: '类型',
       dataIndex: 'type',
       key: 'type',
-      width: 80,
+      width: 100,
       render: (type) => {
-        const map = { local: { color: 'blue', text: '本地' }, online: { color: 'green', text: '线上' }, team: { color: 'purple', text: '团队' } }
+        const map = { 
+          local: { color: 'blue', text: '本地' }, 
+          online: { color: 'green', text: '线上' }, 
+          team: { color: 'purple', text: '团队' } 
+        }
         const item = map[type] || { color: 'default', text: type }
-        return <Tag color={item.color}>{item.text}</Tag>
-      }
-    },
-    {
-      title: '模型',
-      key: 'model',
-      width: 120,
-      render: (_, record) => <span className="text-muted">{record.model || record.config?.model || '-'}</span>
-    },
-    {
-      title: '执行器',
-      key: 'executor_type',
-      width: 80,
-      render: (_, record) => {
-        const map = { ollama: { color: 'cyan', text: 'Ollama' }, api: { color: 'orange', text: 'API' }, shell: { color: 'red', text: 'Shell' } }
-        const item = map[record.executor_type] || { color: 'default', text: record.executor_type }
         return <Tag color={item.color}>{item.text}</Tag>
       }
     },
@@ -264,201 +288,233 @@ function AgentList() {
       dataIndex: 'status',
       key: 'status',
       width: 80,
-      render: (status) => {
+      render: (status, record) => {
+        if (record.is_group || record.children) {
+          // 组状态：根据子级状态判断
+          const children = record.children || []
+          const onlineCount = children.filter(c => c.status === 'online').length
+          return <Tag color="purple">{onlineCount}/{children.length} 在线</Tag>
+        }
         const colorMap = { online: 'success', offline: 'default', error: 'error' }
         const textMap = { online: '在线', offline: '离线', error: '错误' }
         return <Tag color={colorMap[status]}>{textMap[status]}</Tag>
       }
     },
     {
-      title: '最后活跃',
-      dataIndex: 'last_active_at',
-      key: 'last_active_at',
+      title: '执行器/模型',
+      key: 'executor',
+      width: 150,
+      render: (_, record) => {
+        if (record.is_group || record.children) {
+          return <span className="text-muted">-</span>
+        }
+        const executorMap = { 
+          ollama: { color: 'cyan', text: 'Ollama' }, 
+          api: { color: 'orange', text: 'API' }, 
+          shell: { color: 'red', text: 'Shell' } 
+        }
+        const executor = executorMap[record.executor_type] || { color: 'default', text: record.executor_type }
+        return (
+          <Space>
+            <Tag color={executor.color}>{executor.text}</Tag>
+            {record.model && <span className="text-muted">{record.model}</span>}
+          </Space>
+        )
+      }
+    },
+    {
+      title: '创建时间',
+      dataIndex: 'created_at',
+      key: 'created_at',
       width: 160,
       render: (text) => <span className="text-muted">{formatTime(text)}</span>
     },
     {
       title: '操作',
       key: 'action',
-      width: 180,
+      width: 200,
       render: (_, record) => {
-        const isProtected = PROTECTED_IDS.includes(record.id)
+        const isGroup = record.is_group || record.children
+        const isTrash = showTrash
+        
+        if (isTrash) {
+          // 回收站操作
+          return (
+            <Space>
+              {userRole === 'admin' && (
+                <Tooltip title="恢复">
+                  <Button 
+                    type="text" 
+                    icon={<UndoOutlined />} 
+                    style={{ color: '#52c41a' }}
+                    onClick={() => handleRestore(record)} 
+                  />
+                </Tooltip>
+              )}
+            </Space>
+          )
+        }
+        
         return (
           <Space>
-            <Tooltip title="执行任务">
-              <Button
-                type="text"
-                icon={<CaretRightOutlined />}
-                style={{ color: '#52c41a' }}
-                onClick={() => handleRun(record)}
-              />
-            </Tooltip>
-            <Tooltip title="查看详情">
-              <Button type="text" icon={<EyeOutlined />} className="text-primary" onClick={() => handleView(record)} />
-            </Tooltip>
-            <Tooltip title={isProtected ? '系统内置，不可编辑' : '编辑'}>
-              <Button 
-                type="text" 
-                icon={<EditOutlined />} 
-                className={isProtected ? 'text-muted' : 'text-warning'}
-                disabled={isProtected}
-                onClick={() => handleEdit(record)} 
-              />
-            </Tooltip>
-            <Tooltip title={isProtected ? '系统内置，不可删除' : '删除'}>
-              <Button 
-                type="text" 
-                icon={<DeleteOutlined />} 
-                className={isProtected ? 'text-muted' : 'text-error'}
-                disabled={isProtected}
-                onClick={() => handleDelete(record)} 
-              />
-            </Tooltip>
+            {isGroup ? (
+              // 组操作
+              <>
+                <Tooltip title="执行任务">
+                  <Button
+                    type="text"
+                    icon={<CaretRightOutlined />}
+                    style={{ color: '#52c41a' }}
+                    onClick={() => handleRun(record)}
+                  />
+                </Tooltip>
+                <Tooltip title="查看详情">
+                  <Button type="text" icon={<EyeOutlined />} className="text-primary" onClick={() => handleView(record)} />
+                </Tooltip>
+                <Tooltip title="编辑">
+                  <Button type="text" icon={<EditOutlined />} className="text-primary" onClick={() => handleEdit(record)} />
+                </Tooltip>
+                {canModify(record) && (
+                  <Tooltip title="删除">
+                    <Button type="text" icon={<DeleteOutlined />} danger onClick={() => handleDelete(record)} />
+                  </Tooltip>
+                )}
+              </>
+            ) : (
+              // 子级操作
+              <>
+                <Tooltip title="执行任务">
+                  <Button
+                    type="text"
+                    icon={<CaretRightOutlined />}
+                    style={{ color: '#52c41a' }}
+                    onClick={() => handleRun(record)}
+                  />
+                </Tooltip>
+                <Tooltip title="查看详情">
+                  <Button type="text" icon={<EyeOutlined />} className="text-primary" onClick={() => handleView(record)} />
+                </Tooltip>
+                <Tooltip title="编辑">
+                  <Button type="text" icon={<EditOutlined />} className="text-primary" onClick={() => handleEdit(record)} />
+                </Tooltip>
+                {canModify(record) && (
+                  <Tooltip title="删除">
+                    <Button type="text" icon={<DeleteOutlined />} danger onClick={() => handleDelete(record)} />
+                  </Tooltip>
+                )}
+              </>
+            )}
           </Space>
         )
       }
-    }
+    },
   ]
+
+  // 获取所有顶级 Agent（用于创建子级时选择父级）
+  const getRootAgents = () => {
+    return agents.filter(a => a.is_group || a.children)
+  }
 
   return (
     <div>
-      {/* 页面标题 */}
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-primary">Agent列表</h1>
-          <p className="text-secondary mt-1">管理所有智能体</p>
-        </div>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateVisible(true)}>
-          添加Agent
-        </Button>
+      <div className="page-header">
+        <h2>智能体管理</h2>
+        <Space>
+          {!showTrash && (
+            <Button 
+              type="primary" 
+              icon={<PlusOutlined />}
+              onClick={() => setCreateVisible(true)}
+            >
+              新建 Agent
+            </Button>
+          )}
+          {userRole === 'admin' && (
+            <Button 
+              icon={showTrash ? <TeamOutlined /> : <DeleteOutlined />}
+              onClick={() => setShowTrash(!showTrash)}
+            >
+              {showTrash ? '返回列表' : '回收站'}
+            </Button>
+          )}
+        </Space>
       </div>
 
-      {/* 搜索栏 */}
-      <div className="card mb-6">
-        <div className="card-body">
+      {/* 搜索和筛选 */}
+      {!showTrash && (
+        <div style={{ marginBottom: 16 }}>
           <Space>
             <Input
-              placeholder="搜索Agent名称..."
-              prefix={<SearchOutlined className="text-muted" />}
+              placeholder="搜索Agent名称"
+              prefix={<SearchOutlined />}
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
-              onPressEnter={() => { setPagination({ ...pagination, current: 1 }); loadAgents() }}
-              className="w-64"
+              onPressEnter={handleSearch}
+              style={{ width: 200 }}
             />
             <Select
               placeholder="状态筛选"
               allowClear
               value={statusFilter}
-              onChange={(val) => { setStatusFilter(val); setPagination({ ...pagination, current: 1 }) }}
-              className="w-32"
-              options={[
-                { value: 'online', label: '在线' },
-                { value: 'offline', label: '离线' },
-                { value: 'error', label: '错误' },
-              ]}
-            />
-            <Button type="primary" onClick={() => { setPagination({ ...pagination, current: 1 }); loadAgents() }}>搜索</Button>
+              onChange={(value) => setStatusFilter(value)}
+              style={{ width: 120 }}
+            >
+              <Select.Option value="online">在线</Select.Option>
+              <Select.Option value="offline">离线</Select.Option>
+              <Select.Option value="error">错误</Select.Option>
+            </Select>
+            <Button onClick={loadAgents}>刷新</Button>
           </Space>
         </div>
-      </div>
+      )}
 
-      {/* 表格 */}
-      <div className="card">
-        <Table
-          columns={columns}
-          dataSource={agents}
-          rowKey="id"
-          loading={loading}
-          pagination={pagination}
-          onChange={setPagination}
-        />
-      </div>
+      {/* Agent 列表 */}
+      <Table
+        columns={columns}
+        dataSource={agents}
+        loading={loading}
+        rowKey="id"
+        pagination={false}
+        expandable={{
+          childrenColumnName: 'children',
+          defaultExpandAllRows: true,
+        }}
+      />
 
       {/* 查看详情弹框 */}
       <Modal
         title="Agent 详情"
         open={viewVisible}
         onCancel={() => setViewVisible(false)}
-        footer={<Button onClick={() => setViewVisible(false)}>关闭</Button>}
+        footer={null}
         width={600}
       >
         {currentAgent && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px' }}>
-              <div>
-                <label style={{ color: '#9ca3af', fontSize: 12 }}>名称</label>
-                <p style={{ color: '#e5e7eb', margin: '4px 0 0' }}>{currentAgent.name}</p>
+          <div>
+            <p><strong>名称：</strong>{currentAgent.name}</p>
+            <p><strong>类型：</strong>{currentAgent.type}</p>
+            <p><strong>状态：</strong>{currentAgent.status}</p>
+            {currentAgent.is_group && (
+              <p><strong>成员数：</strong>{currentAgent.children?.length || 0}</p>
+            )}
+            {currentAgent.model && <p><strong>模型：</strong>{currentAgent.model}</p>}
+            {currentAgent.executor_type && <p><strong>执行器：</strong>{currentAgent.executor_type}</p>}
+            <p><strong>创建时间：</strong>{formatTime(currentAgent.created_at)}</p>
+            <p><strong>更新时间：</strong>{formatTime(currentAgent.updated_at)}</p>
+            
+            {/* 显示子级 */}
+            {currentAgent.children && currentAgent.children.length > 0 && (
+              <div style={{ marginTop: 16 }}>
+                <strong>团队成员：</strong>
+                <ul>
+                  {currentAgent.children.map(child => (
+                    <li key={child.id}>
+                      {child.name} - <Tag color={child.status === 'online' ? 'success' : 'default'}>{child.status}</Tag>
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <div>
-                <label style={{ color: '#9ca3af', fontSize: 12 }}>类型</label>
-                <p style={{ margin: '4px 0 0' }}>
-                  <Tag color={currentAgent.type === 'local' ? 'blue' : currentAgent.type === 'team' ? 'purple' : 'green'}>
-                    {currentAgent.type === 'local' ? '本地' : currentAgent.type === 'team' ? '团队' : '线上'}
-                  </Tag>
-                </p>
-              </div>
-              <div>
-                <label style={{ color: '#9ca3af', fontSize: 12 }}>状态</label>
-                <p style={{ margin: '4px 0 0' }}>
-                  <Tag color={currentAgent.status === 'online' ? 'success' : currentAgent.status === 'error' ? 'error' : 'default'}>
-                    {currentAgent.status === 'online' ? '在线' : currentAgent.status === 'error' ? '错误' : '离线'}
-                  </Tag>
-                </p>
-              </div>
-              <div>
-                <label style={{ color: '#9ca3af', fontSize: 12 }}>模型</label>
-                <p style={{ color: '#e5e7eb', margin: '4px 0 0' }}>{currentAgent.config?.model || '-'}</p>
-              </div>
-              <div>
-                <label style={{ color: '#9ca3af', fontSize: 12 }}>最后活跃</label>
-                <p style={{ color: '#e5e7eb', margin: '4px 0 0' }}>{formatTime(currentAgent.last_active_at)}</p>
-              </div>
-              <div>
-                <label style={{ color: '#9ca3af', fontSize: 12 }}>创建时间</label>
-                <p style={{ color: '#e5e7eb', margin: '4px 0 0' }}>{formatTime(currentAgent.created_at)}</p>
-              </div>
-            </div>
-
-            {/* Prompt 内容 */}
-            <div>
-              <label style={{ color: '#9ca3af', fontSize: 12 }}>Prompt 配置</label>
-              <pre style={{
-                background: '#1a1d24',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: 8,
-                padding: '12px 16px',
-                marginTop: 8,
-                color: '#e5e7eb',
-                fontSize: 13,
-                lineHeight: 1.6,
-                maxHeight: 300,
-                overflow: 'auto',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-all',
-              }}>
-                {currentAgent.config?.prompt || '（未配置 Prompt）'}
-              </pre>
-            </div>
-
-            {/* 完整 config JSON */}
-            <div>
-              <label style={{ color: '#9ca3af', fontSize: 12 }}>完整配置 (JSON)</label>
-              <pre style={{
-                background: '#1a1d24',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: 8,
-                padding: '12px 16px',
-                marginTop: 8,
-                color: '#8b949e',
-                fontSize: 12,
-                lineHeight: 1.5,
-                maxHeight: 200,
-                overflow: 'auto',
-                whiteSpace: 'pre-wrap',
-              }}>
-                {JSON.stringify(currentAgent.config || {}, null, 2)}
-              </pre>
-            </div>
+            )}
           </div>
         )}
       </Modal>
@@ -472,130 +528,142 @@ function AgentList() {
         confirmLoading={submitting}
         okText="保存"
         cancelText="取消"
-        width={500}
       >
-        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
-          <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入Agent名称' }]}>
-            <Input placeholder="例如：选品专家" />
+        <Form form={form} layout="vertical">
+          <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入名称' }]}>
+            <Input />
           </Form.Item>
           <Form.Item name="type" label="类型" rules={[{ required: true, message: '请选择类型' }]}>
-            <Select placeholder="选择类型">
+            <Select>
               <Select.Option value="local">本地</Select.Option>
               <Select.Option value="online">线上</Select.Option>
+              <Select.Option value="team">团队</Select.Option>
             </Select>
           </Form.Item>
           <Form.Item name="model" label="模型">
-            <Input placeholder="例如：qwen2.5:3b" />
+            <Input placeholder="如 qwen2.5:3b" />
           </Form.Item>
-          <Form.Item name="prompt" label="Prompt">
-            <Input.TextArea rows={6} placeholder="输入 Agent 的系统提示词..." />
+          <Form.Item name="prompt" label="系统提示词">
+            <Input.TextArea rows={4} />
           </Form.Item>
         </Form>
       </Modal>
 
       {/* 创建弹框 */}
       <Modal
-        title="添加新 Agent"
+        title="新建 Agent"
         open={createVisible}
         onCancel={() => setCreateVisible(false)}
         onOk={handleCreate}
         confirmLoading={submitting}
         okText="创建"
         cancelText="取消"
-        width={500}
       >
-        <Form form={createForm} layout="vertical" style={{ marginTop: 16 }}>
-          <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入Agent名称' }]}>
-            <Input placeholder="例如：客服小助手" />
+        <Form form={createForm} layout="vertical">
+          <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入名称' }]}>
+            <Input />
           </Form.Item>
           <Form.Item name="type" label="类型" rules={[{ required: true, message: '请选择类型' }]}>
-            <Select placeholder="选择类型">
+            <Select>
               <Select.Option value="local">本地</Select.Option>
               <Select.Option value="online">线上</Select.Option>
+              <Select.Option value="team">团队</Select.Option>
+            </Select>
+          </Form.Item>
+          <Form.Item name="parent_id" label="所属团队">
+            <Select allowClear placeholder="留空为顶级">
+              {getRootAgents().map(agent => (
+                <Select.Option key={agent.id} value={agent.id}>{agent.name}</Select.Option>
+              ))}
             </Select>
           </Form.Item>
           <Form.Item name="model" label="模型">
-            <Input placeholder="例如：qwen2.5:3b" />
+            <Input placeholder="如 qwen2.5:3b" />
           </Form.Item>
-          <Form.Item name="prompt" label="Prompt">
-            <Input.TextArea rows={6} placeholder="输入 Agent 的系统提示词..." />
+          <Form.Item name="prompt" label="系统提示词">
+            <Input.TextArea rows={4} />
           </Form.Item>
         </Form>
       </Modal>
 
       {/* 执行弹框 */}
       <Modal
-        title={
-          <span>
-            <CaretRightOutlined style={{ color: '#52c41a', marginRight: 8 }} />
-            执行 Agent — {currentAgent?.name}
-          </span>
-        }
+        title={`执行任务 - ${currentAgent?.name}`}
         open={runVisible}
         onCancel={() => setRunVisible(false)}
-        footer={[
-          <Button key="cancel" onClick={() => setRunVisible(false)}>关闭</Button>,
-          <Button
-            key="run"
-            type="primary"
-            icon={runLoading ? <LoadingOutlined /> : <CaretRightOutlined />}
-            loading={runLoading}
-            onClick={handleRunSubmit}
-            disabled={!runInput.trim()}
-          >
-            {runLoading ? '执行中...' : '执行'}
-          </Button>,
-        ]}
+        footer={null}
         width={700}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* 输入区 */}
-          <div>
-            <label style={{ color: '#9ca3af', fontSize: 12, marginBottom: 4, display: 'block' }}>输入内容</label>
-            <Input.TextArea
-              rows={3}
-              placeholder="输入要发送给 Agent 的内容..."
-              value={runInput}
-              onChange={(e) => setRunInput(e.target.value)}
-              onPressEnter={(e) => {
-                if (e.ctrlKey || e.metaKey) handleRunSubmit()
-              }}
-              disabled={runLoading}
-            />
-            <span style={{ color: '#6b7280', fontSize: 11 }}>Ctrl+Enter 快速执行</span>
+        <div>
+          <Input.TextArea
+            value={runInput}
+            onChange={(e) => setRunInput(e.target.value)}
+            placeholder="请输入执行内容..."
+            rows={4}
+            disabled={runLoading}
+          />
+          <div style={{ marginTop: 16, textAlign: 'right' }}>
+            <Space>
+              <Button onClick={() => setRunVisible(false)}>取消</Button>
+              <Button 
+                type="primary" 
+                onClick={handleRunSubmit}
+                loading={runLoading}
+                icon={<CaretRightOutlined />}
+              >
+                执行
+              </Button>
+            </Space>
           </div>
-
+          
           {/* 执行结果 */}
           {runResult && (
-            <div>
-              <label style={{ color: '#9ca3af', fontSize: 12, marginBottom: 4, display: 'block' }}>
-                执行结果
-                {runResult.status === 'success' ? (
-                  <Tag color="success" style={{ marginLeft: 8 }}>
-                    <CheckCircleOutlined /> 成功 · {runResult.duration_formatted}
-                  </Tag>
-                ) : (
-                  <Tag color="error" style={{ marginLeft: 8 }}>
-                    <CloseCircleOutlined /> 失败 · {runResult.duration_formatted}
-                  </Tag>
-                )}
-              </label>
-              <pre style={{
-                background: '#1a1d24',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: 8,
-                padding: '12px 16px',
-                marginTop: 4,
-                color: runResult.status === 'success' ? '#e5e7eb' : '#f87171',
-                fontSize: 13,
-                lineHeight: 1.6,
-                maxHeight: 300,
-                overflow: 'auto',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-all',
-              }}>
-                {runResult.status === 'success' ? runResult.output : (runResult.error || '未知错误')}
-              </pre>
+            <div style={{ marginTop: 16, padding: 16, background: '#f5f5f5', borderRadius: 8 }}>
+              <h4>执行结果</h4>
+              {Array.isArray(runResult) ? (
+                // 组执行结果
+                <div>
+                  {runResult.map((result, index) => (
+                    <div key={index} style={{ marginBottom: 8 }}>
+                      <Tag color={result.status === 'success' ? 'success' : 'error'}>
+                        {result.agent_name}
+                      </Tag>
+                      {result.status === 'success' ? (
+                        <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                      ) : (
+                        <CloseCircleOutlined style={{ color: '#ff4d4f' }} />
+                      )}
+                      {result.duration && <span className="text-muted"> ({result.duration}ms)</span>}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                // 单个执行结果
+                <div>
+                  <p><strong>状态：</strong>
+                    <Tag color={runResult.status === 'success' ? 'success' : 'error'}>
+                      {runResult.status}
+                    </Tag>
+                  </p>
+                  {runResult.duration_formatted && <p><strong>耗时：</strong>{runResult.duration_formatted}</p>}
+                  {runResult.output && (
+                    <div>
+                      <strong>输出：</strong>
+                      <pre style={{ background: '#fff', padding: 8, borderRadius: 4, maxHeight: 200, overflow: 'auto' }}>
+                        {runResult.output}
+                      </pre>
+                    </div>
+                  )}
+                  {runResult.error && (
+                    <div>
+                      <strong>错误：</strong>
+                      <pre style={{ background: '#fff2f0', padding: 8, borderRadius: 4, color: '#ff4d4f' }}>
+                        {runResult.error}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
