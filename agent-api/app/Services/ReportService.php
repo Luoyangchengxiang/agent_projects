@@ -352,10 +352,20 @@ class ReportService
             return null;
         }
 
+        // 根据文件扩展名判断 MIME 类型
+        $extension = strtolower(pathinfo($report->file_path, PATHINFO_EXTENSION));
+        $mime = match ($extension) {
+            'md' => 'text/markdown',
+            'csv' => 'text/csv',
+            'json' => 'application/json',
+            'txt' => 'text/plain',
+            default => 'application/octet-stream',
+        };
+
         return [
             'path' => $report->file_path,
             'filename' => basename($report->file_path),
-            'mime' => 'text/csv',
+            'mime' => $mime,
         ];
     }
 }
