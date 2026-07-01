@@ -21,11 +21,10 @@ export const EDGE_TYPES = {
   collaborates: { label: '协作', color: '#ec4899' },
 }
 
-// 获取节点运行状态
+// 获取节点运行状态（基于关联 Agent 的真实状态）
 export const getNodeStatus = (node) => {
-  const runningAgentIds = [1, 2, 3]
-  if (node.type === 'agent' && runningAgentIds.map(String).includes(String(node.id))) {
-    return 'running'
-  }
+  // 从关联的 Agent 获取真实状态
+  if (node.agent?.status === 'online') return 'running'
+  if (node.agent?.status === 'error') return 'error'
   return 'idle'
 }

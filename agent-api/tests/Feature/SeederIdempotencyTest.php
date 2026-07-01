@@ -36,6 +36,18 @@ class SeederIdempotencyTest extends TestCase
      */
     public function test_graph_seeder_is_idempotent(): void
     {
+        // 先创建 Agent 数据（GraphSeeder 依赖 Agent 表）
+        $this->seed(\Database\Seeders\AgentSeeder::class);
+        
+        // 创建一个组 Agent 和子 Agent
+        $group = \App\Models\Agent::create([
+            'name' => '测试团队',
+            'type' => 'team',
+            'status' => 'offline',
+        ]);
+        \App\Models\Agent::where('name', '选品专家')->update(['parent_id' => $group->id]);
+        \App\Models\Agent::where('name', '运营管家')->update(['parent_id' => $group->id]);
+
         $this->seed(\Database\Seeders\GraphSeeder::class);
         $nodeCount1 = GraphNode::count();
         $edgeCount1 = GraphEdge::count();
@@ -139,17 +151,36 @@ class SeederIdempotencyTest extends TestCase
     }
 
     /**
-     * 测试 GraphSeeder 创建正确的图谱结构
+     * 测试 GraphSeeder 创建正确的图谱结构（基于 Agent 列表动态生成）
      */
     public function test_graph_seeder_creates_expected_structure(): void
     {
+        // 先创建 Agent 数据（GraphSeeder 依赖 Agent 表）
+        $this->seed(\Database\Seeders\AgentSeeder::class);
+        
+        // 创建一个组 Agent 和子 Agent
+        $group = \App\Models\Agent::create([
+            'name' => '测试团队',
+            'type' => 'team',
+            'status' => 'offline',
+        ]);
+        \App\Models\Agent::where('name', '选品专家')->update(['parent_id' => $group->id]);
+        \App\Models\Agent::where('name', '运营管家')->update(['parent_id' => $group->id]);
+
         $this->seed(\Database\Seeders\GraphSeeder::class);
 
-        $this->assertEquals(1, GraphNode::where('type', 'agent_group')->count());
-        $this->assertEquals(4, GraphNode::where('type', 'agent')->count());
-        $this->assertEquals(3, GraphNode::where('type', 'knowledge')->count());
-        $this->assertEquals(3, GraphNode::where('type', 'skill')->count());
-        $this->assertEquals(2, GraphNode::where('type', 'output')->count());
-        $this->assertGreaterThan(0, GraphEdge::count(), '应有图谱边');
+        // 至少应有 agent_group 和 agent 节点
+        $this->assertGreaterThan(0, GraphNode::where('type', 'agent_group')->count(),
+            '应有至少1个智能体组');
+        $this->assertGreaterThan(0, GraphNode::where('type', 'agent')->count(),
+            '应有至少1个智能体节点');
+        
+        // 每个图谱节点应关联到 Agent
+        $nodesWithAgent = GraphNode::whereNotNull('agent_id')->count();
+        $this->assertGreaterThan(0, $nodesWithAgent, '图谱节点应关联到 Agent');
+        
+        // 应有包含关系边
+        $this->assertGreaterThan(0, GraphEdge::where('relation_type', 'contains')->count(),
+            '应有包含关系边');
     }
 }

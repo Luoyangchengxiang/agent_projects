@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Agent;
 use App\Models\GraphNode;
 use App\Models\GraphEdge;
 use Illuminate\Database\Seeder;
@@ -15,106 +16,49 @@ class GraphSeeder extends Seeder
             return;
         }
 
-        // 创建开店智能体组
-        $group = GraphNode::create([
-            'type' => 'agent_group',
-            'name' => '开店智能体组',
-            'description' => '负责电商开店全流程的智能体团队',
-        ]);
+        $agents = Agent::active()->with('children')->get();
+        if ($agents->isEmpty()) {
+            return;
+        }
 
-        // 创建子 Agent
-        $agents = [
-            ['name' => '主控Agent', 'description' => '负责任务调度和流程控制'],
-            ['name' => '选品Agent', 'description' => '负责热销商品调研和选品分析'],
-            ['name' => '内容Agent', 'description' => '负责商品详情页和营销文案生成'],
-            ['name' => '客服Agent', 'description' => '负责客户咨询和售后处理'],
-        ];
+        // 处理组（有子级的 Agent）
+        $groups = $agents->filter(fn($a) => $a->children->count() > 0);
+        foreach ($groups as $group) {
+            $groupNode = GraphNode::create([
+                'type' => 'agent_group',
+                'name' => $group->name,
+                'description' => mb_substr($group->system_prompt ?? '', 0, 200) ?: '智能体团队: ' . $group->name,
+                'agent_id' => $group->id,
+            ]);
 
-        $agentNodes = [];
-        foreach ($agents as $agentData) {
-            $agentNode = GraphNode::create([
+            foreach ($group->children as $child) {
+                $childNode = GraphNode::create([
+                    'type' => 'agent',
+                    'name' => $child->name,
+                    'description' => mb_substr($child->system_prompt ?? '', 0, 200) ?: '智能体: ' . $child->name,
+                    'agent_id' => $child->id,
+                    'metadata' => ['model' => $child->model, 'executor_type' => $child->executor_type],
+                ]);
+
+                GraphEdge::create([
+                    'source_id' => $groupNode->id,
+                    'target_id' => $childNode->id,
+                    'relation_type' => 'contains',
+                    'label' => '包含',
+                ]);
+            }
+        }
+
+        // 处理独立 Agent
+        $standalone = $agents->filter(fn($a) => $a->parent_id === null && $a->children->count() === 0);
+        foreach ($standalone as $agent) {
+            GraphNode::create([
                 'type' => 'agent',
-                'name' => $agentData['name'],
-                'description' => $agentData['description'],
-            ]);
-            $agentNodes[] = $agentNode;
-
-            GraphEdge::create([
-                'source_id' => $group->id,
-                'target_id' => $agentNode->id,
-                'relation_type' => 'contains',
-                'label' => '包含',
+                'name' => $agent->name,
+                'description' => mb_substr($agent->system_prompt ?? '', 0, 200) ?: '独立智能体: ' . $agent->name,
+                'agent_id' => $agent->id,
+                'metadata' => ['model' => $agent->model, 'executor_type' => $agent->executor_type],
             ]);
         }
-
-        // 创建知识库节点
-        $knowledgeNodes = [
-            ['name' => '1688热销数据', 'description' => '来自1688平台的热销商品数据'],
-            ['name' => '用户画像', 'description' => '目标用户的消费习惯和偏好'],
-            ['name' => '竞品分析', 'description' => '竞争对手的商品和策略分析'],
-        ];
-
-        foreach ($knowledgeNodes as $kData) {
-            $kNode = GraphNode::create([
-                'type' => 'knowledge',
-                'name' => $kData['name'],
-                'description' => $kData['description'],
-            ]);
-
-            GraphEdge::create([
-                'source_id' => $agentNodes[1]->id,
-                'target_id' => $kNode->id,
-                'relation_type' => 'uses',
-                'label' => '使用',
-            ]);
-        }
-
-        // 创建技能节点
-        $skillNodes = [
-            ['name' => '商品调研', 'description' => '分析热销商品趋势和利润率'],
-            ['name' => '文案撰写', 'description' => '生成商品标题和详情描述'],
-            ['name' => '图片处理', 'description' => '商品图片优化和主图生成'],
-        ];
-
-        foreach ($skillNodes as $sData) {
-            $sNode = GraphNode::create([
-                'type' => 'skill',
-                'name' => $sData['name'],
-                'description' => $sData['description'],
-            ]);
-
-            if ($sData['name'] === '商品调研') {
-                GraphEdge::create(['source_id' => $agentNodes[1]->id, 'target_id' => $sNode->id, 'relation_type' => 'uses', 'label' => '使用']);
-            } elseif ($sData['name'] === '文案撰写') {
-                GraphEdge::create(['source_id' => $agentNodes[2]->id, 'target_id' => $sNode->id, 'relation_type' => 'uses', 'label' => '使用']);
-            } elseif ($sData['name'] === '图片处理') {
-                GraphEdge::create(['source_id' => $agentNodes[2]->id, 'target_id' => $sNode->id, 'relation_type' => 'uses', 'label' => '使用']);
-            }
-        }
-
-        // 创建产出物节点
-        $outputNodes = [
-            ['name' => '选品报告', 'description' => '热销商品调研报告'],
-            ['name' => '商品详情页', 'description' => '商品详情描述和图片'],
-        ];
-
-        foreach ($outputNodes as $oData) {
-            $oNode = GraphNode::create([
-                'type' => 'output',
-                'name' => $oData['name'],
-                'description' => $oData['description'],
-            ]);
-
-            if ($oData['name'] === '选品报告') {
-                GraphEdge::create(['source_id' => $agentNodes[1]->id, 'target_id' => $oNode->id, 'relation_type' => 'produces', 'label' => '产出']);
-            } elseif ($oData['name'] === '商品详情页') {
-                GraphEdge::create(['source_id' => $agentNodes[2]->id, 'target_id' => $oNode->id, 'relation_type' => 'produces', 'label' => '产出']);
-            }
-        }
-
-        // 创建Agent之间的协作关系
-        GraphEdge::create(['source_id' => $agentNodes[0]->id, 'target_id' => $agentNodes[1]->id, 'relation_type' => 'collaborates', 'label' => '调度']);
-        GraphEdge::create(['source_id' => $agentNodes[0]->id, 'target_id' => $agentNodes[2]->id, 'relation_type' => 'collaborates', 'label' => '调度']);
-        GraphEdge::create(['source_id' => $agentNodes[0]->id, 'target_id' => $agentNodes[3]->id, 'relation_type' => 'collaborates', 'label' => '调度']);
     }
 }
