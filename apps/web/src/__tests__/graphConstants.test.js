@@ -57,22 +57,22 @@ describe('EDGE_TYPES', () => {
 })
 
 describe('getNodeStatus', () => {
-  it('运行中的 agent 返回 running', () => {
-    const node = { id: 1, type: 'agent' }
+  it('agent.status=online 返回 running', () => {
+    const node = { id: 38, type: 'agent', agent: { status: 'online' } }
     expect(getNodeStatus(node)).toBe('running')
   })
 
-  it('运行中的 agent（id=2）返回 running', () => {
-    const node = { id: 2, type: 'agent' }
-    expect(getNodeStatus(node)).toBe('running')
+  it('agent.status=error 返回 error', () => {
+    const node = { id: 39, type: 'agent', agent: { status: 'error' } }
+    expect(getNodeStatus(node)).toBe('error')
   })
 
-  it('运行中的 agent（id=3）返回 running', () => {
-    const node = { id: 3, type: 'agent' }
-    expect(getNodeStatus(node)).toBe('running')
+  it('agent.status=offline 返回 idle', () => {
+    const node = { id: 40, type: 'agent', agent: { status: 'offline' } }
+    expect(getNodeStatus(node)).toBe('idle')
   })
 
-  it('不在运行列表中的 agent 返回 idle', () => {
+  it('没有 agent 关联时返回 idle', () => {
     const node = { id: 99, type: 'agent' }
     expect(getNodeStatus(node)).toBe('idle')
   })
@@ -84,13 +84,8 @@ describe('getNodeStatus', () => {
     expect(getNodeStatus({ id: 1, type: 'agent_group' })).toBe('idle')
   })
 
-  it('字符串 id 也能匹配', () => {
-    const node = { id: '1', type: 'agent' }
-    expect(getNodeStatus(node)).toBe('running')
-  })
-
-  it('id=0 返回 idle', () => {
-    const node = { id: 0, type: 'agent' }
+  it('agent 为 null 时返回 idle', () => {
+    const node = { id: 1, type: 'agent', agent: null }
     expect(getNodeStatus(node)).toBe('idle')
   })
 })
