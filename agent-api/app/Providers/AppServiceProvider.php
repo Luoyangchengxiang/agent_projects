@@ -24,5 +24,8 @@ class AppServiceProvider extends ServiceProvider
         Carbon::serializeUsing(function ($carbon) {
             return $carbon->format('Y-m-d H:i:s');
         });
+
+        // Agent 变动时自动同步知识图谱
+        \App\Models\Agent::observe(\App\Observers\AgentGraphObserver::class);
     }
 }

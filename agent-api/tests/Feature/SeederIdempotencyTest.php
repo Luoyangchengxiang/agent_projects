@@ -39,14 +39,20 @@ class SeederIdempotencyTest extends TestCase
         // 先创建 Agent 数据（GraphSeeder 依赖 Agent 表）
         $this->seed(\Database\Seeders\AgentSeeder::class);
         
-        // 创建一个组 Agent 和子 Agent
+        // 创建一个组 Agent 和子 Agent（用 save() 触发 Observer）
         $group = \App\Models\Agent::create([
             'name' => '测试团队',
             'type' => 'team',
             'status' => 'offline',
         ]);
-        \App\Models\Agent::where('name', '选品专家')->update(['parent_id' => $group->id]);
-        \App\Models\Agent::where('name', '运营管家')->update(['parent_id' => $group->id]);
+        
+        $agent1 = \App\Models\Agent::where('name', '选品专家')->first();
+        $agent1->parent_id = $group->id;
+        $agent1->save();
+        
+        $agent2 = \App\Models\Agent::where('name', '运营管家')->first();
+        $agent2->parent_id = $group->id;
+        $agent2->save();
 
         $this->seed(\Database\Seeders\GraphSeeder::class);
         $nodeCount1 = GraphNode::count();
@@ -158,14 +164,21 @@ class SeederIdempotencyTest extends TestCase
         // 先创建 Agent 数据（GraphSeeder 依赖 Agent 表）
         $this->seed(\Database\Seeders\AgentSeeder::class);
         
-        // 创建一个组 Agent 和子 Agent
+        // 创建一个组 Agent 和子 Agent（用 save() 触发 Observer）
         $group = \App\Models\Agent::create([
             'name' => '测试团队',
             'type' => 'team',
             'status' => 'offline',
         ]);
-        \App\Models\Agent::where('name', '选品专家')->update(['parent_id' => $group->id]);
-        \App\Models\Agent::where('name', '运营管家')->update(['parent_id' => $group->id]);
+        
+        // 用单个模型更新触发 Observer（mass update 不触发事件）
+        $agent1 = \App\Models\Agent::where('name', '选品专家')->first();
+        $agent1->parent_id = $group->id;
+        $agent1->save();
+        
+        $agent2 = \App\Models\Agent::where('name', '运营管家')->first();
+        $agent2->parent_id = $group->id;
+        $agent2->save();
 
         $this->seed(\Database\Seeders\GraphSeeder::class);
 
