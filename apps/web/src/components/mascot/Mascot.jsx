@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom'
 import useMascotStore from '../../stores/mascotStore'
 import Live2DRenderer from './Live2DRenderer'
 import RadialMenu from './RadialMenu'
+import MascotSettingsPanel from './MascotSettingsPanel'
 import ChatPanel from '../chat/ChatPanel'
 import './mascot.css'
 
@@ -228,6 +229,9 @@ export default function Mascot() {
           <ChatPanel embedded={false} onClose={closeChat} />
         </div>
       )}
+
+      {/* 设置面板 */}
+      <MascotSettingsPanel />
     </>
   )
 }
