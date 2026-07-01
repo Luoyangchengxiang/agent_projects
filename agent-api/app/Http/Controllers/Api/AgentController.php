@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
 use App\Services\AgentExecutor;
+use App\Services\ModelfileService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -89,6 +90,9 @@ class AgentController extends Controller
                 ] : null,
                 'created_at' => $agent->created_at,
                 'updated_at' => $agent->updated_at,
+                'executor_type' => $agent->executor_type,
+                'model' => $agent->model,
+                'system_prompt' => $agent->system_prompt,
                 'is_group' => $agent->activeChildren->count() > 0,
                 'children' => $agent->activeChildren->map(function ($child) {
                     return [
@@ -98,6 +102,7 @@ class AgentController extends Controller
                         'status' => $child->status,
                         'executor_type' => $child->executor_type,
                         'model' => $child->model,
+                        'system_prompt' => $child->system_prompt,
                         'is_deleted' => $child->is_deleted,
                         'created_by' => $child->created_by,
                         'created_at' => $child->created_at,
@@ -161,7 +166,7 @@ class AgentController extends Controller
     /**
      * 更新Agent
      */
-    public function update(Request $request, Agent $agent): JsonResponse
+    public function update(Request $request, Agent $agent, ModelfileService $modelfile): JsonResponse
     {
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
@@ -178,10 +183,17 @@ class AgentController extends Controller
 
         $agent->update($validated);
 
+        // 同步到本地 Modelfile（仅本地类型 Agent）
+        $syncResult = null;
+        if (in_array($agent->type, ['local']) && !$agent->is_group) {
+            $syncResult = $modelfile->syncToLocal($agent);
+        }
+
         return response()->json([
             'success' => true,
             'data' => $agent,
             'message' => 'Agent更新成功',
+            'modelfile_synced' => $syncResult,
         ]);
     }
 
@@ -360,6 +372,58 @@ class AgentController extends Controller
             'success' => $successCount > 0,
             'message' => "执行完成: {$successCount}/{$children->count()} 成功",
             'data' => $results,
+        ]);
+    }
+
+    /**
+     * 同步：本地 Modelfile → 数据库（全量）
+     */
+    public function syncFromLocal(ModelfileService $modelfile): JsonResponse
+    {
+        $results = $modelfile->syncAllToDatabase();
+        return response()->json([
+            'success' => true,
+            'message' => '本地 → 数据库同步完成',
+            'data' => $results,
+        ]);
+    }
+
+    /**
+     * 同步：数据库 → 本地 Modelfile（全量）
+     */
+    public function syncToLocal(ModelfileService $modelfile): JsonResponse
+    {
+        $results = $modelfile->syncAllToLocal();
+        return response()->json([
+            'success' => true,
+            'message' => '数据库 → 本地同步完成',
+            'data' => $results,
+        ]);
+    }
+
+    /**
+     * 读取单个 Agent 的本地 Modelfile 原始内容
+     */
+    public function getModelfile(Agent $agent, ModelfileService $modelfile): JsonResponse
+    {
+        $path = $modelfile->getModelfilePath($agent);
+        if (!$path) {
+            return response()->json([
+                'success' => false,
+                'message' => '未找到本地 Modelfile',
+            ]);
+        }
+
+        $content = file_get_contents($path);
+        $parsed = $modelfile->parseModelfile($path);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'path' => $path,
+                'raw' => $content,
+                'parsed' => $parsed,
+            ],
         ]);
     }
 }

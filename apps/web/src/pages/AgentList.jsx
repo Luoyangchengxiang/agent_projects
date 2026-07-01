@@ -14,7 +14,8 @@ import {
   UndoOutlined,
   TeamOutlined,
   UserOutlined,
-  RobotOutlined
+  RobotOutlined,
+  SyncOutlined
 } from '@ant-design/icons'
 import { Table, Tag, Button, Input, Space, App, Modal, Form, Select, Tooltip, Typography, Descriptions } from 'antd'
 import { agentApi } from '@agent-monitor/api'
@@ -246,6 +247,43 @@ function AgentList() {
     return d.toLocaleDateString('zh-CN') + ' ' + d.toLocaleTimeString('zh-CN', { hour12: false })
   }
 
+  // 同步 Modelfile
+  const [syncing, setSyncing] = useState(false)
+  const handleSyncFromLocal = async () => {
+    setSyncing(true)
+    try {
+      const res = await agentApi.syncFromLocal()
+      if (res.success) {
+        const count = res.data?.length || 0
+        message.success(`本地 → 数据库同步完成，${count} 个 Agent 已更新`)
+        loadAgents()
+      } else {
+        message.warning(res.message || '同步完成，无变更')
+      }
+    } catch (e) {
+      message.error('同步失败: ' + (e.message || '未知错误'))
+    } finally {
+      setSyncing(false)
+    }
+  }
+
+  const handleSyncToLocal = async () => {
+    setSyncing(true)
+    try {
+      const res = await agentApi.syncToLocal()
+      if (res.success) {
+        const count = res.data?.length || 0
+        message.success(`数据库 → 本地同步完成，${count} 个 Modelfile 已更新`)
+      } else {
+        message.warning(res.message || '同步完成，无变更')
+      }
+    } catch (e) {
+      message.error('同步失败: ' + (e.message || '未知错误'))
+    } finally {
+      setSyncing(false)
+    }
+  }
+
   // 判断是否可以删除/编辑
   const canModify = (record) => {
     if (userRole === 'admin') return true
@@ -260,7 +298,7 @@ function AgentList() {
       dataIndex: 'name',
       key: 'name',
       render: (text, record) => {
-        const isGroup = record.is_group || (record.children && record.children.length > 0)
+        const isGroup = record.is_group
         return (
           <span className="font-medium">
             {isGroup ? (
@@ -294,7 +332,7 @@ function AgentList() {
       key: 'status',
       width: 100,
       render: (status, record) => {
-        const isGroup = record.is_group || (record.children && record.children.length > 0)
+        const isGroup = record.is_group
         if (isGroup) {
           // 组状态：根据子级状态判断
           const children = record.children || []
@@ -309,10 +347,9 @@ function AgentList() {
     {
       title: '执行器/模型',
       key: 'executor',
-      width: 150,
+      width: 200,
       render: (_, record) => {
-        const isGroup = record.is_group || (record.children && record.children.length > 0)
-        if (isGroup) {
+        if (record.is_group) {
           return <span className="text-muted">-</span>
         }
         const executorMap = { 
@@ -322,9 +359,9 @@ function AgentList() {
         }
         const executor = executorMap[record.executor_type] || { color: 'default', text: record.executor_type }
         return (
-          <Space>
-            <Tag color={executor.color}>{executor.text}</Tag>
-            {record.model && <span className="text-muted">{record.model}</span>}
+          <Space size={4} wrap={false}>
+            <Tag color={executor.color} style={{ margin: 0 }}>{executor.text}</Tag>
+            {record.model && <Tag color="blue" style={{ margin: 0 }}>{record.model}</Tag>}
           </Space>
         )
       }
@@ -341,7 +378,7 @@ function AgentList() {
       key: 'action',
       width: 200,
       render: (_, record) => {
-        const isGroup = record.is_group || (record.children && record.children.length > 0)
+        const isGroup = record.is_group
         const isTrash = showTrash
         
         if (isTrash) {
@@ -448,6 +485,28 @@ function AgentList() {
               {showTrash ? '返回列表' : '回收站'}
             </Button>
           )}
+          {!showTrash && userRole === 'admin' && (
+            <Tooltip title="从本地 Modelfile 同步到数据库">
+              <Button
+                icon={<SyncOutlined spin={syncing} />}
+                onClick={handleSyncFromLocal}
+                loading={syncing}
+              >
+                本地 → DB
+              </Button>
+            </Tooltip>
+          )}
+          {!showTrash && userRole === 'admin' && (
+            <Tooltip title="从数据库同步到本地 Modelfile">
+              <Button
+                icon={<SyncOutlined spin={syncing} />}
+                onClick={handleSyncToLocal}
+                loading={syncing}
+              >
+                DB → 本地
+              </Button>
+            </Tooltip>
+          )}
         </Space>
       </div>
 
@@ -489,6 +548,28 @@ function AgentList() {
         expandable={{
           childrenColumnName: 'children',
           defaultExpandAllRows: true,
+          expandIcon: ({ expanded, onExpand, record }) => {
+            // 非组不显示展开图标
+            if (!record.is_group) {
+              return <span style={{ display: 'inline-block', width: 16 }} />;
+            }
+            // 组显示展开/收起图标
+            return (
+              <span
+                onClick={(e) => onExpand(record, e)}
+                style={{
+                  cursor: 'pointer',
+                  fontSize: 10,
+                  marginRight: 4,
+                  transition: 'transform 0.2s',
+                  transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                  display: 'inline-block',
+                }}
+              >
+                ▶
+              </span>
+            );
+          },
         }}
       />
 

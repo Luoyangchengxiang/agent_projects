@@ -44,6 +44,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/agents/{agent}/run', [App\Http\Controllers\Api\AgentController::class, 'run']);
     Route::post('/agents/{agent}/restore', [App\Http\Controllers\Api\AgentController::class, 'restore']);
     Route::get('/agents-trash', [App\Http\Controllers\Api\AgentController::class, 'trash']);
+    // Modelfile 同步
+    Route::post('/agents-sync/from-local', [App\Http\Controllers\Api\AgentController::class, 'syncFromLocal']);
+    Route::post('/agents-sync/to-local', [App\Http\Controllers\Api\AgentController::class, 'syncToLocal']);
+    Route::get('/agents/{agent}/modelfile', [App\Http\Controllers\Api\AgentController::class, 'getModelfile']);
 
     // 执行日志
     Route::apiResource('execution-logs', App\Http\Controllers\Api\ExecutionLogController::class)->only(['index', 'show']);

@@ -108,6 +108,19 @@ export const agentApi = {
   }>> {
     return api.post(`/agents/${id}/run`, data)
   },
+
+  // Modelfile 同步
+  syncFromLocal(): Promise<ApiResponse<any[]>> {
+    return api.post('/agents-sync/from-local')
+  },
+
+  syncToLocal(): Promise<ApiResponse<any[]>> {
+    return api.post('/agents-sync/to-local')
+  },
+
+  getModelfile(id: number): Promise<ApiResponse<{ path: string; raw: string; parsed: any }>> {
+    return api.get(`/agents/${id}/modelfile`)
+  },
 }
 
 // 执行日志相关API
