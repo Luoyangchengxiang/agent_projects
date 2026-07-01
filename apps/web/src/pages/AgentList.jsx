@@ -16,7 +16,7 @@ import {
   UserOutlined,
   RobotOutlined
 } from '@ant-design/icons'
-import { Table, Tag, Button, Input, Space, App, Modal, Form, Select, Tooltip, Typography } from 'antd'
+import { Table, Tag, Button, Input, Space, App, Modal, Form, Select, Tooltip, Typography, Descriptions } from 'antd'
 import { agentApi } from '@agent-monitor/api'
 
 const { Title } = Typography
@@ -492,7 +492,7 @@ function AgentList() {
 
       {/* 查看详情弹框 */}
       <Modal
-        title="Agent 详情"
+        title="智能体详情"
         open={viewVisible}
         onCancel={() => setViewVisible(false)}
         footer={null}
@@ -500,28 +500,121 @@ function AgentList() {
       >
         {currentAgent && (
           <div>
-            <p><strong>名称：</strong>{currentAgent.name}</p>
-            <p><strong>类型：</strong>{currentAgent.type}</p>
-            <p><strong>状态：</strong>{currentAgent.status}</p>
-            {currentAgent.is_group && (
-              <p><strong>成员数：</strong>{currentAgent.children?.length || 0}</p>
-            )}
-            {currentAgent.model && <p><strong>模型：</strong>{currentAgent.model}</p>}
-            {currentAgent.executor_type && <p><strong>执行器：</strong>{currentAgent.executor_type}</p>}
-            <p><strong>创建时间：</strong>{formatTime(currentAgent.created_at)}</p>
-            <p><strong>更新时间：</strong>{formatTime(currentAgent.updated_at)}</p>
+            {/* 基本信息 */}
+            <Descriptions bordered column={2} size="small">
+              <Descriptions.Item label="名称" span={2}>
+                <Space>
+                  {currentAgent.is_group ? <TeamOutlined style={{ color: '#722ed1' }} /> : <UserOutlined style={{ color: '#1890ff' }} />}
+                  <span style={{ fontWeight: 500 }}>{currentAgent.name}</span>
+                </Space>
+              </Descriptions.Item>
+              
+              <Descriptions.Item label="类型">
+                {(() => {
+                  const typeMap = { local: { color: 'blue', text: '本地' }, online: { color: 'green', text: '线上' }, team: { color: 'purple', text: '团队' } }
+                  const item = typeMap[currentAgent.type] || { color: 'default', text: currentAgent.type }
+                  return <Tag color={item.color}>{item.text}</Tag>
+                })()}
+              </Descriptions.Item>
+              
+              <Descriptions.Item label="状态">
+                {currentAgent.is_group ? (
+                  (() => {
+                    const children = currentAgent.children || []
+                    const onlineCount = children.filter(c => c.status === 'online').length
+                    return <Tag color="purple">{onlineCount}/{children.length} 在线</Tag>
+                  })()
+                ) : (
+                  (() => {
+                    const statusMap = { online: { color: 'success', text: '在线' }, offline: { color: 'default', text: '离线' }, error: { color: 'error', text: '错误' } }
+                    const item = statusMap[currentAgent.status] || { color: 'default', text: currentAgent.status }
+                    return <Tag color={item.color}>{item.text}</Tag>
+                  })()
+                )}
+              </Descriptions.Item>
+              
+              {!currentAgent.is_group && currentAgent.executor_type && (
+                <Descriptions.Item label="执行器">
+                  {(() => {
+                    const executorMap = { ollama: { color: 'cyan', text: 'Ollama' }, api: { color: 'orange', text: 'API' }, shell: { color: 'red', text: 'Shell' } }
+                    const item = executorMap[currentAgent.executor_type] || { color: 'default', text: currentAgent.executor_type }
+                    return <Tag color={item.color}>{item.text}</Tag>
+                  })()}
+                </Descriptions.Item>
+              )}
+              
+              {!currentAgent.is_group && currentAgent.model && (
+                <Descriptions.Item label="模型">
+                  <Tag>{currentAgent.model}</Tag>
+                </Descriptions.Item>
+              )}
+              
+              <Descriptions.Item label="创建时间" span={currentAgent.is_group ? 2 : 1}>
+                {formatTime(currentAgent.created_at)}
+              </Descriptions.Item>
+              
+              {!currentAgent.is_group && (
+                <Descriptions.Item label="更新时间">
+                  {formatTime(currentAgent.updated_at)}
+                </Descriptions.Item>
+              )}
+            </Descriptions>
             
-            {/* 显示子级 */}
+            {/* 团队成员列表 */}
             {currentAgent.children && currentAgent.children.length > 0 && (
               <div style={{ marginTop: 16 }}>
-                <strong>团队成员：</strong>
-                <ul>
-                  {currentAgent.children.map(child => (
-                    <li key={child.id}>
-                      {child.name} - <Tag color={child.status === 'online' ? 'success' : 'default'}>{child.status}</Tag>
-                    </li>
-                  ))}
-                </ul>
+                <div style={{ marginBottom: 8, fontWeight: 500 }}>团队成员</div>
+                <Table
+                  dataSource={currentAgent.children}
+                  rowKey="id"
+                  pagination={false}
+                  size="small"
+                  columns={[
+                    {
+                      title: '名称',
+                      dataIndex: 'name',
+                      key: 'name',
+                      render: (text) => (
+                        <Space>
+                          <UserOutlined style={{ color: '#1890ff' }} />
+                          {text}
+                        </Space>
+                      )
+                    },
+                    {
+                      title: '类型',
+                      dataIndex: 'type',
+                      key: 'type',
+                      width: 80,
+                      render: (type) => {
+                        const map = { local: { color: 'blue', text: '本地' }, online: { color: 'green', text: '线上' }, team: { color: 'purple', text: '团队' } }
+                        const item = map[type] || { color: 'default', text: type }
+                        return <Tag color={item.color}>{item.text}</Tag>
+                      }
+                    },
+                    {
+                      title: '状态',
+                      dataIndex: 'status',
+                      key: 'status',
+                      width: 80,
+                      render: (status) => {
+                        const map = { online: { color: 'success', text: '在线' }, offline: { color: 'default', text: '离线' }, error: { color: 'error', text: '错误' } }
+                        const item = map[status] || { color: 'default', text: status }
+                        return <Tag color={item.color}>{item.text}</Tag>
+                      }
+                    },
+                    {
+                      title: '执行器',
+                      key: 'executor',
+                      width: 100,
+                      render: (_, record) => {
+                        const map = { ollama: { color: 'cyan', text: 'Ollama' }, api: { color: 'orange', text: 'API' }, shell: { color: 'red', text: 'Shell' } }
+                        const item = map[record.executor_type] || { color: 'default', text: record.executor_type || '-' }
+                        return <Tag color={item.color}>{item.text}</Tag>
+                      }
+                    }
+                  ]}
+                />
               </div>
             )}
           </div>
