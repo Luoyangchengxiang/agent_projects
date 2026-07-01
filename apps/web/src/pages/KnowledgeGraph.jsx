@@ -243,27 +243,28 @@ function KnowledgeGraph() {
           color: '#e0e0e0',
         },
         z: 1000,
-        extraCssText: 'z-index: 1000;',
+        extraCssText: 'z-index: 1000; max-width: 280px; overflow: hidden;',
         formatter: (params) => {
           if (params.dataType === 'node') {
             const typeConfig = NODE_TYPES[params.data.type] || NODE_TYPES.agent
             const status = params.data.status
-            const statusText = status === 'running' ? '<span style="color: #10b981;">● 运行中</span>' : '<span style="color: #9ca3af;">○ 空闲</span>'
+            const statusText = status === 'running' ? '<span style="color: #10b981;">● 运行中</span>' : status === 'error' ? '<span style="color: #ef4444;">● 异常</span>' : '<span style="color: #9ca3af;">○ 空闲</span>'
             const safeName = escapeHtml(params.name)
             const safeLabel = escapeHtml(typeConfig.label)
             const safeIcon = escapeHtml(typeConfig.icon)
-            const safeDesc = params.data.description ? `<div style="color: #9ca3af; max-width: 200px; word-break: break-all;">描述: ${escapeHtml(params.data.description)}</div>` : ''
+            // 截断过长描述，保留前80字符
+            const descText = params.data.description || ''
+            const truncatedDesc = descText.length > 80 ? descText.substring(0, 80) + '...' : descText
+            const safeDesc = truncatedDesc ? `<div style="color: #9ca3af; max-width: 250px; word-break: break-word; line-height: 1.4; margin-top: 4px; font-size: 12px;">${escapeHtml(truncatedDesc)}</div>` : ''
             
             return `
-              <div style="padding: 4px 0;">
-                <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px;">
+              <div style="padding: 4px 0; max-width: 280px;">
+                <div style="font-size: 15px; font-weight: bold; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                   ${safeIcon} ${safeName}
                 </div>
-                <div style="color: #9ca3af; margin-bottom: 4px;">
-                  类型: ${safeLabel}
-                </div>
-                <div style="margin-bottom: 4px;">
-                  状态: ${statusText}
+                <div style="display: flex; gap: 12px; font-size: 12px;">
+                  <span style="color: #9ca3af;">${safeLabel}</span>
+                  ${statusText}
                 </div>
                 ${safeDesc}
               </div>

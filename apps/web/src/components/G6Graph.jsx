@@ -135,17 +135,23 @@ function G6Graph({ graphData, onNodeClick, highlightNodeIds = [] }) {
             const status = node.status
             const statusText = status === 'running'
               ? '<span style="color: #10b981;">● 运行中</span>'
+              : status === 'error'
+              ? '<span style="color: #ef4444;">● 异常</span>'
               : '<span style="color: #9ca3af;">○ 空闲</span>'
             const safeName = escapeHtml(node.name)
-            const safeDesc = node.description ? `<div style="color: #9ca3af; max-width: 200px; word-break: break-all; margin-top: 4px;">描述: ${escapeHtml(node.description)}</div>` : ''
+            const descText = node.description || ''
+            const truncatedDesc = descText.length > 80 ? descText.substring(0, 80) + '...' : descText
+            const safeDesc = truncatedDesc ? `<div style="color: #9ca3af; max-width: 250px; word-break: break-word; margin-top: 4px; font-size: 12px; line-height: 1.4;">${escapeHtml(truncatedDesc)}</div>` : ''
 
             return `
-              <div style="padding: 8px; background: rgba(26, 26, 46, 0.95); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #e0e0e0; font-size: 13px;">
-                <div style="font-size: 15px; font-weight: bold; margin-bottom: 6px;">
+              <div style="padding: 8px; background: rgba(26, 26, 46, 0.95); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #e0e0e0; font-size: 13px; max-width: 280px;">
+                <div style="font-size: 15px; font-weight: bold; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                   ${escapeHtml(typeConfig.icon)} ${safeName}
                 </div>
-                <div style="color: #9ca3af; margin-bottom: 3px;">类型: ${escapeHtml(typeConfig.label)}</div>
-                <div>状态: ${statusText}</div>
+                <div style="display: flex; gap: 12px; font-size: 12px;">
+                  <span style="color: #9ca3af;">${escapeHtml(typeConfig.label)}</span>
+                  ${statusText}
+                </div>
                 ${safeDesc}
               </div>
             `
