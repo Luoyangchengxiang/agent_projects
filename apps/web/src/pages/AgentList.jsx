@@ -260,7 +260,7 @@ function AgentList() {
       dataIndex: 'name',
       key: 'name',
       render: (text, record) => {
-        const isGroup = record.is_group || record.children
+        const isGroup = record.is_group || (record.children && record.children.length > 0)
         return (
           <span className="font-medium">
             {isGroup ? (
@@ -294,7 +294,8 @@ function AgentList() {
       key: 'status',
       width: 100,
       render: (status, record) => {
-        if (record.is_group || record.children) {
+        const isGroup = record.is_group || (record.children && record.children.length > 0)
+        if (isGroup) {
           // 组状态：根据子级状态判断
           const children = record.children || []
           const onlineCount = children.filter(c => c.status === 'online').length
@@ -310,7 +311,8 @@ function AgentList() {
       key: 'executor',
       width: 150,
       render: (_, record) => {
-        if (record.is_group || record.children) {
+        const isGroup = record.is_group || (record.children && record.children.length > 0)
+        if (isGroup) {
           return <span className="text-muted">-</span>
         }
         const executorMap = { 
@@ -339,7 +341,7 @@ function AgentList() {
       key: 'action',
       width: 200,
       render: (_, record) => {
-        const isGroup = record.is_group || record.children
+        const isGroup = record.is_group || (record.children && record.children.length > 0)
         const isTrash = showTrash
         
         if (isTrash) {
