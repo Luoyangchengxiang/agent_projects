@@ -211,7 +211,7 @@ function Reports() {
       title: '格式',
       dataIndex: 'format',
       key: 'format',
-      width: 100,
+      width: 150,
       render: (format) => (
         <Tag>{format?.toUpperCase()}</Tag>
       ),
