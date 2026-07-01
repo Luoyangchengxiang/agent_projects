@@ -2,7 +2,45 @@
 
 ## 概述
 
-知识图谱模块提供 Agent、工具、任务之间的关系可视化，支持 ECharts 和 G6 两种渲染引擎。
+知识图谱模块提供 Agent、技能、团队之间的关系可视化，支持 ECharts 和 G6 两种渲染引擎。
+
+**核心特性：Agent 变动自动同步图谱，无需手动维护。**
+
+## 自动同步机制
+
+### Model Observer（实时同步）
+
+Agent 的增删改操作会自动同步到知识图谱：
+
+```
+Agent 创建 → 图谱节点 + 技能节点 + 协作边
+Agent 更新 → 节点信息更新 + 技能刷新
+Agent 删除 → 节点清理 + 孤立技能清理
+parent_id 变动 → 父子关系重建 + 协作边重建
+```
+
+**实现文件：** `app/Observers/AgentGraphObserver.php`
+
+**注册位置：** `app/Providers/AppServiceProvider.php` → `boot()` 方法
+
+### 手动全量同步
+
+当数据异常或需要重建时，使用命令行：
+
+```bash
+# 增量同步（已有节点跳过）
+php artisan graph:sync
+
+# 清空重建
+php artisan graph:sync --clear
+```
+
+**同步逻辑：**
+1. 扫描所有 Agent（`active` + `with('children')`）
+2. 有子级的 Agent → `agent_group` 节点
+3. 子 Agent → `agent` 节点 + `contains` 边
+4. 从 `system_prompt` 提取技能关键词 → `skill` 节点 + `uses` 边
+5. 同组 Agent 之间 → `collaborates` 边
 
 ## 数据库设计
 
@@ -10,10 +48,12 @@
 -- 图节点
 CREATE TABLE graph_nodes (
     id BIGSERIAL PRIMARY KEY,
+    type VARCHAR(50) NOT NULL,        -- agent_group/agent/skill/knowledge/output
     name VARCHAR(255) NOT NULL,
-    type VARCHAR(50) NOT NULL,        -- agent/tool/task/concept
     description TEXT,
-    properties JSONB,
+    metadata JSONB,                    -- { model, executor_type }
+    agent_id BIGINT REFERENCES agents(id) ON DELETE SET NULL,
+    created_by BIGINT REFERENCES users(id),
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -23,16 +63,33 @@ CREATE TABLE graph_edges (
     id BIGSERIAL PRIMARY KEY,
     source_id BIGINT REFERENCES graph_nodes(id) ON DELETE CASCADE,
     target_id BIGINT REFERENCES graph_nodes(id) ON DELETE CASCADE,
-    type VARCHAR(50) NOT NULL,        -- depends_on/uses/creates
-    weight FLOAT DEFAULT 1.0,
-    properties JSONB,
-    created_at TIMESTAMP DEFAULT NOW()
+    relation_type VARCHAR(50) NOT NULL, -- contains/uses/produces/depends_on/collaborates
+    label VARCHAR(100),
+    metadata JSONB,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
 );
-
-CREATE INDEX idx_edges_source ON graph_edges(source_id);
-CREATE INDEX idx_edges_target ON graph_edges(target_id);
-CREATE INDEX idx_nodes_type ON graph_nodes(type);
 ```
+
+## 节点类型
+
+| 类型 | 说明 | 图标 | 颜色 |
+|------|------|------|------|
+| `agent_group` | 智能体团队 | 🤖 | #6366f1 |
+| `agent` | 智能体 | ⚡ | #06b6d4 |
+| `skill` | 技能 | 🎯 | #f59e0b |
+| `knowledge` | 知识库 | 📚 | #8b5cf6 |
+| `output` | 产出物 | 📊 | #10b981 |
+
+## 关系类型
+
+| 类型 | 说明 | 颜色 |
+|------|------|------|
+| `contains` | 团队包含成员 | #6366f1 |
+| `uses` | 使用技能 | #06b6d4 |
+| `collaborates` | 协作关系 | #ec4899 |
+| `produces` | 产出 | #10b981 |
+| `depends_on` | 依赖 | #f59e0b |
 
 ## 后端 API
 
@@ -53,38 +110,35 @@ Route::prefix('graph')->group(function () {
 
 ### index — 获取全图数据
 
-```php
-public function index(Request $request)
-{
-    $nodes = GraphNode::all();
-    $edges = GraphEdge::with(['source', 'target'])->get();
-
-    return response()->json([
-        'success' => true,
-        'data' => [
-            'nodes' => $nodes,
-            'edges' => $edges,
-        ],
-    ]);
-}
+```
+GET /api/graph?type=agent&search=选品
+Authorization: Bearer {token}
 ```
 
-### search — 搜索节点
-
-```php
-public function search(Request $request)
+返回：
+```json
 {
-    $keyword = $request->input('keyword', '');
-
-    $nodes = GraphNode::where('name', 'like', "%{$keyword}%")
-        ->orWhere('description', 'like', "%{$keyword}%")
-        ->limit(50)
-        ->get();
-
-    return response()->json([
-        'success' => true,
-        'data' => $nodes,
-    ]);
+  "success": true,
+  "data": {
+    "nodes": [
+      {
+        "id": 1,
+        "type": "agent_group",
+        "name": "开店团队",
+        "description": "...",
+        "agent_id": 37,
+        "agent": { "status": "offline", "model": "qwen2.5:3b" }
+      }
+    ],
+    "edges": [
+      {
+        "source_id": 1,
+        "target_id": 2,
+        "relation_type": "contains",
+        "label": "包含"
+      }
+    ]
+  }
 }
 ```
 
@@ -92,130 +146,57 @@ public function search(Request $request)
 
 ### 双引擎切换
 
-```jsx
-// pages/KnowledgeGraph.jsx
-const [renderer, setRenderer] = useState('echarts')
+- **ECharts**：适合中小规模图谱，交互流畅
+- **G6**：适合大规模图谱，支持更复杂的布局算法
 
-// 工具栏切换
-<Dropdown menu={{ items: [
-  { key: 'echarts', label: 'ECharts' },
-  { key: 'g6', label: 'G6 图谱' },
-], onClick: ({ key }) => setRenderer(key) }}>
-  <Button>切换渲染器</Button>
-</Dropdown>
+### 节点状态
 
-// 渲染
-{renderer === 'echarts'
-  ? <EChartsGraph data={graphData} />
-  : <G6Graph data={graphData} />
-}
-```
-
-### ECharts 渲染
-
-```jsx
-// 使用 ECharts graph 类型
-const option = {
-  series: [{
-    type: 'graph',
-    layout: 'force',
-    data: nodes.map(n => ({
-      name: n.name,
-      id: String(n.id),
-      symbolSize: 30,
-      category: n.type,
-    })),
-    links: edges.map(e => ({
-      source: String(e.source_id),
-      target: String(e.target_id),
-    })),
-    force: { repulsion: 200 },
-    categories: [
-      { name: 'agent' },
-      { name: 'tool' },
-      { name: 'task' },
-    ],
-  }],
-}
-```
-
-### G6 渲染
-
-```jsx
-// components/G6Graph.jsx
-import G6 from '@antv/g6'
-
-useEffect(() => {
-  const graph = new G6.Graph({
-    container: containerRef.current,
-    width: 800,
-    height: 600,
-    modes: { default: ['drag-canvas', 'zoom-canvas'] },
-    layout: { type: 'force' },
-  })
-
-  graph.data({ nodes, edges })
-  graph.render()
-
-  return () => graph.destroy()
-}, [nodes, edges])
-```
-
-### 常量定义
+节点运行状态从关联 Agent 的真实状态获取：
 
 ```javascript
-// constants/graphConstants.js
-export const NODE_TYPES = {
-  agent: { color: '#1677ff', label: 'Agent' },
-  tool: { color: '#52c41a', label: '工具' },
-  task: { color: '#faad14', label: '任务' },
-  concept: { color: '#722ed1', label: '概念' },
-}
-
-export const EDGE_TYPES = {
-  depends_on: { color: '#ff4d4f', label: '依赖' },
-  uses: { color: '#1677ff', label: '使用' },
-  creates: { color: '#52c41a', label: '创建' },
+export const getNodeStatus = (node) => {
+  if (node.agent?.status === 'online') return 'running'
+  if (node.agent?.status === 'error') return 'error'
+  return 'idle'
 }
 ```
 
-## XSS 防护
+### 悬浮框（Tooltip）
 
-Tooltip 中显示用户数据时必须转义：
+- 描述文字截断到 80 字符，超出显示 `...`
+- 最大宽度 280px，防止溢出
+- 名称超长时 `text-overflow: ellipsis`
+- 支持三种状态：运行中（绿）、异常（红）、空闲（灰）
 
-```javascript
-// utils/htmlUtils.js
-export function escapeHtml(str) {
-  if (!str) return ''
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}
+## 数据导入
 
-// 使用
-tooltip: escapeHtml(node.name)
+### 执行日志和报告
+
+从本地报告文件批量导入：
+
+```bash
+# 导入全部
+php artisan data:import --all
+
+# 仅导入执行日志
+php artisan data:import --logs
+
+# 仅导入报告
+php artisan data:import --reports
 ```
 
-## 测试
+**导入来源：** `~/local-ai/agents/开店团队/报告/` 目录下的 `.md` 文件
 
-```javascript
-// tests/constants/graphConstants.test.js
-describe('graphConstants', () => {
-  it('NODE_TYPES 包含所有类型', () => {
-    expect(NODE_TYPES).toHaveProperty('agent')
-    expect(NODE_TYPES).toHaveProperty('tool')
-    expect(NODE_TYPES).toHaveProperty('task')
-    expect(NODE_TYPES).toHaveProperty('concept')
-  })
+## 相关文件
 
-  it('每个节点类型有 color 和 label', () => {
-    Object.values(NODE_TYPES).forEach(type => {
-      expect(type).toHaveProperty('color')
-      expect(type).toHaveProperty('label')
-    })
-  })
-})
-```
+| 文件 | 说明 |
+|------|------|
+| `app/Observers/AgentGraphObserver.php` | Agent 变动自动同步图谱 |
+| `app/Console/Commands/SyncKnowledgeGraph.php` | 手动全量同步命令 |
+| `app/Console/Commands/ImportLocalData.php` | 本地数据导入命令 |
+| `app/Http/Controllers/GraphController.php` | 图谱 API 控制器 |
+| `app/Models/GraphNode.php` | 图节点模型 |
+| `app/Models/GraphEdge.php` | 图边模型 |
+| `apps/web/src/pages/KnowledgeGraph.jsx` | 图谱页面 |
+| `apps/web/src/components/G6Graph.jsx` | G6 渲染组件 |
+| `apps/web/src/constants/graphConstants.js` | 节点/边类型常量 |

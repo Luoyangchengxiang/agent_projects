@@ -4,6 +4,60 @@
 
 ---
 
+## [0.4.0] - 2026-07-01
+
+### ✨ 新功能
+
+- **知识图谱自动生成**
+  - 新增 `graph:sync` 命令：从 Agent 列表自动创建图谱节点和关系边
+  - 自动提取 system_prompt 中的技能关键词，创建技能节点
+  - 同组 Agent 自动建立协作关系
+  - 支持 `--clear` 参数清空重建
+
+- **Agent 变动自动同步图谱（Model Observer）**
+  - 创建 Agent → 自动创建图谱节点 + 技能 + 协作边
+  - 更新 Agent → 自动更新节点信息 + 刷新技能
+  - 删除 Agent → 自动清理节点和孤立技能
+  - 修改 parent_id → 自动重建父子关系和协作边
+
+- **本地数据批量导入**
+  - 新增 `data:import` 命令：从本地报告文件导入执行日志和报告
+  - 支持 `--logs`（仅日志）、`--reports`（仅报告）、`--all`（全部）
+  - 自动从文件名提取日期，生成结果摘要
+
+- **智能体树状结构**
+  - 新增 parent_id 字段支持父子关系
+  - 团队（type=team）为组，下辖独立智能体
+  - API 支持 `?tree=true` 返回树状结构
+  - 前端表格支持展开/折叠子级
+
+- **软删除与回收站**
+  - 新增 is_deleted / deleted_at 字段
+  - 支持软删除、恢复、回收站查看
+  - 管理员可操作所有记录，普通用户只能操作自己创建的
+
+- **Modelfile 双向同步**
+  - 编辑 Agent 时自动写回本地 Modelfile
+  - 保留原有 PARAMETER 参数
+  - 前端新增"本地→DB"和"DB→本地"同步按钮
+
+### 🐛 Bug 修复
+
+- **测试隔离**
+  - 测试改用独立 PostgreSQL schema（testing），不再清空生产数据
+  - 配置 `phpunit.xml` 设置 `DB_SCHEMA=testing`
+
+- **知识图谱悬浮框溢出**
+  - 描述文字截断到 80 字符，超出显示省略号
+  - 添加 max-width: 280px 限制
+  - 名称超长时 text-overflow: ellipsis
+
+- **图谱节点状态**
+  - 从硬编码 ID 改为读取 Agent 真实状态（online/offline/error）
+  - 新增 error 状态红色显示
+
+---
+
 ## [0.3.5] - 2026-07-01
 
 ### 🐛 Bug 修复

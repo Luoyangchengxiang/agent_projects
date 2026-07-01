@@ -98,28 +98,44 @@ agent-monitor/
 | 模块 | 说明 | 文档 |
 |------|------|------|
 | 🏠 仪表盘 | 系统概览、实时统计、图表 | - |
-| 🤖 Agent 管理 | CRUD、状态监控 | [API](docs-site/api/agents.md) |
-| 📋 执行日志 | 任务执行记录 | - |
+| 🤖 Agent 管理 | 树状结构、软删除、回收站、Modelfile 双向同步 | [API](docs-site/api/agents.md) |
+| 📋 执行日志 | 任务执行记录、本地报告批量导入 | - |
 | ❌ 错误日志 | 错误记录、解决标记 | - |
 | 🚨 错误告警 | 阈值规则、Webhook 通知 | [文档](docs-site/modules/alerts.md) |
 | 📊 性能监控 | CPU/内存/响应时间指标 | [文档](docs-site/modules/metrics.md) |
-| 🕸 知识图谱 | ECharts + G6 双引擎 | [文档](docs-site/modules/graph.md) |
+| 🕸 知识图谱 | 自动生成、Agent 变动实时同步、ECharts + G6 双引擎 | [文档](docs-site/modules/graph.md) |
 | ⏰ 定时任务 | 创建、暂停、恢复、手动执行 | [文档](docs-site/modules/cronjobs.md) |
-| 📄 数据报告 | 周报/月报/选品报告 | - |
+| 📄 数据报告 | 周报/月报/选品报告、Markdown 渲染 | - |
 | 💬 客服系统 | AI + 人工接管 | - |
 | 📢 版本更新 | 版本记录、通知中心 | - |
-| 🔐 权限管理 | 角色权限控制 | - |
+| 🔐 权限管理 | admin/support/user 角色权限控制 | - |
 | 🎭 看板娘系统 | Live2D 形象、互动菜单、首次选择锁定 | - |
 | 🔑 用户认证 | 注册/登录、验证码、用户名或邮箱登录、记住密码 | - |
 
 ## 🧪 测试
 
 ```bash
-# 前端测试 (237 个用例)
+# 前端测试 (236 个用例)
 cd apps/web && pnpm test
 
-# 后端测试 (94 个用例)
+# 后端测试 (94 个用例，使用独立 testing schema，不影响生产数据)
 cd agent-api && vendor/bin/phpunit
+```
+
+## 🔧 常用命令
+
+```bash
+# 知识图谱同步
+php artisan graph:sync            # 增量同步
+php artisan graph:sync --clear    # 清空重建
+
+# 本地数据导入
+php artisan data:import --all     # 导入执行日志 + 报告
+php artisan data:import --logs    # 仅日志
+php artisan data:import --reports # 仅报告
+
+# 知识库构建
+php artisan knowledge:build       # 构建客服 RAG 知识库
 ```
 
 ## 🐳 部署
