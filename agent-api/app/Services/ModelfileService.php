@@ -203,17 +203,134 @@ class ModelfileService
 
     /**
      * 全量同步：本地 → DB
+     * 1. 更新 DB 中已有 Agent 的 prompt/model
+     * 2. 本地存在但 DB 中不存在的 Agent → 自动创建
      */
     public function syncAllToDatabase(): array
     {
         $results = [];
+
+        // 第一步：扫描本地目录
+        $localAgents = $this->scanLocalAgents();
+
+        // 第二步：先创建组（parent_name 为 null 且 is_group=true）
+        foreach ($localAgents as $info) {
+            if (!empty($info['is_group'])) {
+                $exists = Agent::where('name', $info['name'])->first();
+                if (!$exists) {
+                    $agent = Agent::create([
+                        'name' => $info['name'],
+                        'type' => 'team',
+                        'status' => 'offline',
+                        'executor_type' => 'ollama',
+                    ]);
+                    $results[] = ['agent' => $info['name'], 'synced' => true, 'action' => 'created (group)'];
+                    Log::info("本地 → DB 创建组: {$info['name']}");
+                }
+            }
+        }
+
+        // 第三步：创建子 Agent 和独立 Agent
+        foreach ($localAgents as $info) {
+            if (!empty($info['is_group'])) continue; // 组已处理
+
+            $exists = Agent::where('name', $info['name'])->first();
+            if (!$exists) {
+                // 查找父级 ID
+                $parentId = null;
+                if (!empty($info['parent_name'])) {
+                    $parent = Agent::where('name', $info['parent_name'])->first();
+                    $parentId = $parent?->id;
+                }
+
+                $agent = Agent::create([
+                    'name' => $info['name'],
+                    'type' => 'local',
+                    'status' => 'offline',
+                    'executor_type' => 'ollama',
+                    'model' => $info['model'],
+                    'system_prompt' => $info['system_prompt'],
+                    'parent_id' => $parentId,
+                ]);
+                $label = $parentId ? 'created (child)' : 'created';
+                $results[] = ['agent' => $info['name'], 'synced' => true, 'action' => $label];
+                Log::info("本地 → DB 创建: {$info['name']}");
+            }
+        }
+
+        // 第四步：更新 DB 中已有 Agent 的 prompt/model
         $agents = Agent::all();
         foreach ($agents as $agent) {
             $changed = $this->syncToDatabase($agent);
             if ($changed) {
-                $results[] = ['agent' => $agent->name, 'synced' => true];
+                $results[] = ['agent' => $agent->name, 'synced' => true, 'action' => 'updated'];
             }
         }
+
+        return $results;
+    }
+
+    /**
+     * 扫描本地 agents 目录，返回所有 Modelfile 信息
+     */
+    private function scanLocalAgents(): array
+    {
+        $results = [];
+        $basePath = $this->basePath;
+
+        if (!is_dir($basePath)) return $results;
+
+        // 扫描顶级目录
+        $topDirs = array_filter(glob($basePath . '/*'), 'is_dir');
+        foreach ($topDirs as $dir) {
+            $name = basename($dir);
+
+            // 扫描子目录（组内 Agent）— 先收集子目录信息
+            $subDirs = array_filter(glob($dir . '/*'), 'is_dir');
+            $hasChildren = false;
+            foreach ($subDirs as $subDir) {
+                $subName = basename($subDir);
+                // 跳过非 Agent 目录
+                if (in_array($subName, ['chroma_db', '__pycache__', '共享文档', '优化记录', '报告', '案例库'])) continue;
+                $subModelfile = $subDir . '/Modelfile';
+                if (file_exists($subModelfile)) {
+                    $hasChildren = true;
+                    $parsed = $this->parseModelfile($subModelfile);
+                    $results[] = [
+                        'name' => $subName,
+                        'model' => $parsed['model'] ?? null,
+                        'system_prompt' => $parsed['system_prompt'] ?? null,
+                        'parent_name' => $name,  // 先用名字，后面转 ID
+                    ];
+                }
+            }
+
+            // 如果有子目录，说明是组（即使没有自己的 Modelfile）
+            if ($hasChildren) {
+                $modelfile = $dir . '/Modelfile';
+                $parsed = file_exists($modelfile) ? $this->parseModelfile($modelfile) : [];
+                $results[] = [
+                    'name' => $name,
+                    'model' => $parsed['model'] ?? null,
+                    'system_prompt' => $parsed['system_prompt'] ?? null,
+                    'parent_name' => null,
+                    'is_group' => true,
+                ];
+            } else {
+                // 独立 Agent（有 Modelfile 但没有子目录）
+                $modelfile = $dir . '/Modelfile';
+                if (file_exists($modelfile)) {
+                    $parsed = $this->parseModelfile($modelfile);
+                    $results[] = [
+                        'name' => $name,
+                        'model' => $parsed['model'] ?? null,
+                        'system_prompt' => $parsed['system_prompt'] ?? null,
+                        'parent_name' => null,
+                    ];
+                }
+            }
+        }
+
         return $results;
     }
 

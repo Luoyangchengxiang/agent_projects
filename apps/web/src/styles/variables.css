@@ -132,7 +132,19 @@ input, textarea, select {
 }
 
 .ant-message .ant-message-notice .anticon {
-  color: inherit !important;
+  /* success=绿色, warning=橙色, error=红色, info=蓝色 */
+}
+.ant-message .ant-message-notice .anticon-check-circle {
+  color: #52c41a !important;
+}
+.ant-message .ant-message-notice .anticon-close-circle {
+  color: #ff4d4f !important;
+}
+.ant-message .ant-message-notice .anticon-exclamation-circle {
+  color: #faad14 !important;
+}
+.ant-message .ant-message-notice .anticon-info-circle {
+  color: #1890ff !important;
 }
 
 /* notification 通知框 */
