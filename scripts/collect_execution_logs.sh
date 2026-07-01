@@ -6,8 +6,10 @@ set -e
 
 # 配置
 API_BASE="http://localhost:8000/api"
-AGENT_NAME="开店团队"
 TASK_PREFIX="daily_inspection"
+
+# 开店团队成员
+TEAM_AGENTS=("选品专家" "运营管家" "财务顾问" "决策引擎" "分析专家")
 
 # 获取今天的日期
 TODAY=$(date +%Y-%m-%d)
@@ -60,7 +62,7 @@ cd /home/cheng/projects/agent-monitor/agent-api
 EXISTING=$(php artisan tinker --execute="
 use App\Models\Agent;
 use App\Models\ExecutionLog;
-\$agent = Agent::where('name', '${AGENT_NAME}')->first();
+\$agent = Agent::where('name', '${TEAM_AGENTS[0]}')->first();
 if (\$agent) {
     echo ExecutionLog::where('agent_id', \$agent->id)->whereDate('created_at', '${TODAY}')->count();
 } else {
@@ -81,13 +83,7 @@ use App\Models\Agent;
 use App\Models\ExecutionLog;
 use Carbon\Carbon;
 
-\$agent = Agent::where('name', '${AGENT_NAME}')->first();
-
-if (!\$agent) {
-    echo 'Agent not found';
-    exit(1);
-}
-
+\$teamAgents = ['选品专家', '运营管家', '财务顾问', '决策引擎', '分析专家'];
 \$createdAt = Carbon::parse('${CREATED_AT}');
 \$output = file_get_contents('${REPORT_FILE}');
 
@@ -99,21 +95,34 @@ if (preg_match('/📊 调研摘要.*🎯 核心选品建议/s', \$output, \$matc
     \$summary = mb_substr(\$output, 0, 500, 'UTF-8') . '...';
 }
 
-ExecutionLog::create([
-    'agent_id' => \$agent->id,
-    'task_id' => '${TASK_PREFIX}_${TODAY_COMPACT}',
-    'status' => 'success',
-    'input' => '每日热销商品调研',
-    'output' => \$output,
-    'context' => json_encode(['source' => 'cron_job', 'report_file' => basename('${REPORT_FILE}')]),
-    'duration' => ${DURATION},
-    'result_summary' => \$summary,
-    'agent_group' => '${AGENT_NAME}',
-    'created_at' => \$createdAt,
-    'updated_at' => \$createdAt,
-]);
+\$successCount = 0;
+foreach (\$teamAgents as \$agentName) {
+    \$agent = Agent::where('name', \$agentName)->first();
+    
+    if (!\$agent) {
+        echo \"⚠️  Agent [\$agentName] 不存在，跳过\n\";
+        continue;
+    }
+    
+    ExecutionLog::create([
+        'agent_id' => \$agent->id,
+        'task_id' => '${TASK_PREFIX}_${TODAY_COMPACT}',
+        'status' => 'success',
+        'input' => '每日热销商品调研 - 开店团队协作',
+        'output' => \$output,
+        'context' => json_encode(['source' => 'cron_job', 'team' => '开店团队', 'report_file' => basename('${REPORT_FILE}')]),
+        'duration' => ${DURATION},
+        'result_summary' => \$summary,
+        'agent_group' => '开店团队',
+        'created_at' => \$createdAt,
+        'updated_at' => \$createdAt,
+    ]);
+    
+    \$successCount++;
+    echo \"✅ 已写入: \$agentName\n\";
+}
 
-echo '✅ 已写入数据库: ' . \$createdAt->format('Y-m-d H:i:s');
+echo \"\n🎉 执行结果收集完成！共写入 \$successCount 条记录\n\";
 "
 
 echo "🎉 执行结果收集完成！"
