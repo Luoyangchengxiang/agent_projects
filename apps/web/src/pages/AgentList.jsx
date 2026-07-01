@@ -13,10 +13,13 @@ import {
   CloseCircleOutlined,
   UndoOutlined,
   TeamOutlined,
-  UserOutlined
+  UserOutlined,
+  RobotOutlined
 } from '@ant-design/icons'
-import { Table, Tag, Button, Input, Space, App, Modal, Form, Select, Tooltip, Badge } from 'antd'
+import { Table, Tag, Button, Input, Space, App, Modal, Form, Select, Tooltip, Typography } from 'antd'
 import { agentApi } from '@agent-monitor/api'
+
+const { Title } = Typography
 
 function AgentList() {
   const { message, modal } = App.useApp()
@@ -26,6 +29,7 @@ function AgentList() {
   const [statusFilter, setStatusFilter] = useState(null)
   const [showTrash, setShowTrash] = useState(false)
   const [userRole, setUserRole] = useState('user')
+  const [currentUserId, setCurrentUserId] = useState(null)
 
   // 弹框状态
   const [viewVisible, setViewVisible] = useState(false)
@@ -43,9 +47,10 @@ function AgentList() {
   const [runResult, setRunResult] = useState(null)
 
   useEffect(() => {
-    // 获取用户角色
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    // 获取用户信息（注意：API用的key是auth_user）
+    const user = JSON.parse(localStorage.getItem('auth_user') || '{}')
     setUserRole(user.role || 'user')
+    setCurrentUserId(user.id)
     loadAgents()
   }, [statusFilter, showTrash])
 
@@ -245,7 +250,7 @@ function AgentList() {
   const canModify = (record) => {
     if (userRole === 'admin') return true
     // 普通用户只能删除自己创建的
-    return record.created_by && record.created_by === JSON.parse(localStorage.getItem('user') || '{}').id
+    return record.created_by && record.created_by === currentUserId
   }
 
   // 树状表格列定义
@@ -287,7 +292,7 @@ function AgentList() {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      width: 80,
+      width: 100,
       render: (status, record) => {
         if (record.is_group || record.children) {
           // 组状态：根据子级状态判断
@@ -417,8 +422,12 @@ function AgentList() {
 
   return (
     <div>
-      <div className="page-header">
-        <h2>智能体管理</h2>
+      {/* 标题栏 - 与其他页面保持一致 */}
+      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Title level={4} style={{ margin: 0 }}>
+          <RobotOutlined style={{ marginRight: 8 }} />
+          智能体管理
+        </Title>
         <Space>
           {!showTrash && (
             <Button 
