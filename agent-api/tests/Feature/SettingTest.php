@@ -4,12 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\Setting;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class SettingTest extends TestCase
 {
-    use RefreshDatabase;
 
     private User $admin;
     private string $token;

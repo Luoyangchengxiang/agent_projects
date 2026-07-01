@@ -7,13 +7,11 @@ use App\Models\ExecutionLog;
 use App\Models\User;
 use App\Services\AgentExecutor;
 use App\Services\OllamaService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
 use Tests\TestCase;
 
 class AgentExecutionTest extends TestCase
 {
-    use RefreshDatabase;
 
     private User $user;
     private string $token;

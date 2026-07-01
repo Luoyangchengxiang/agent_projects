@@ -9,14 +9,12 @@ use App\Models\CronJobLog;
 use App\Models\User;
 use App\Services\AgentExecutor;
 use App\Services\OllamaService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Mockery;
 use Tests\TestCase;
 
 class CronJobSchedulerTest extends TestCase
 {
-    use RefreshDatabase;
 
     private User $user;
 

@@ -8,12 +8,10 @@ use App\Models\ExecutionLog;
 use App\Models\Report;
 use App\Models\User;
 use App\Services\ReportService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class ReportTest extends TestCase
 {
-    use RefreshDatabase;
 
     private User $user;
     private string $token;

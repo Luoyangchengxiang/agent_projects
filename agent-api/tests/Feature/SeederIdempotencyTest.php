@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Models\Agent;
 use App\Models\ExecutionLog;
 use App\Models\GraphNode;
@@ -14,7 +13,6 @@ use App\Models\User;
 
 class SeederIdempotencyTest extends TestCase
 {
-    use RefreshDatabase;
 
     /**
      * 测试 AgentSeeder 幂等性：运行两次不插入重复数据

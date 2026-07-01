@@ -6,12 +6,10 @@ use App\Models\AlertRule;
 use App\Models\Setting;
 use App\Models\User;
 use App\Services\NotificationService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class NotificationTest extends TestCase
 {
-    use RefreshDatabase;
 
     private User $admin;
     private string $token;
