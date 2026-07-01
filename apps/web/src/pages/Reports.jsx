@@ -194,12 +194,13 @@ function Reports() {
       title: '类型',
       dataIndex: 'type',
       key: 'type',
-      width: 100,
+      width: 120,
       render: (type) => {
         const typeMap = {
           weekly: { color: 'blue', text: '周报' },
           monthly: { color: 'purple', text: '月报' },
           selection: { color: 'green', text: '选品报告' },
+          research: { color: 'cyan', text: '调研报告' },
           custom: { color: 'orange', text: '自定义' },
         }
         const config = typeMap[type] || { color: 'default', text: type }
@@ -210,16 +211,16 @@ function Reports() {
       title: '格式',
       dataIndex: 'format',
       key: 'format',
-      width: 80,
+      width: 100,
       render: (format) => (
-        <Tag>{format.toUpperCase()}</Tag>
+        <Tag>{format?.toUpperCase()}</Tag>
       ),
     },
     {
       title: '生成人',
       dataIndex: ['generator', 'name'],
       key: 'generator',
-      width: 100,
+      width: 120,
       render: (name) => name || '-',
     },
     {
