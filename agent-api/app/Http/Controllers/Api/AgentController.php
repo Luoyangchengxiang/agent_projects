@@ -258,7 +258,7 @@ class AgentController extends Controller
             ], 403);
         }
 
-        $agents = Agent::deleted()
+        $agents = Agent::onlyDeleted()
             ->with(['parent', 'creator'])
             ->orderBy('deleted_at', 'desc')
             ->paginate(15);

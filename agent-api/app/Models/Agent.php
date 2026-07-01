@@ -170,7 +170,7 @@ class Agent extends BaseModel
     /**
      * Scope: 已删除
      */
-    public function scopeDeleted(Builder $query): Builder
+    public function scopeOnlyDeleted(Builder $query): Builder
     {
         return $query->where('is_deleted', true);
     }
