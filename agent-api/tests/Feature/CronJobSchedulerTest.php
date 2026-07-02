@@ -9,6 +9,7 @@ use App\Models\CronJobLog;
 use App\Models\User;
 use App\Services\AgentExecutor;
 use App\Services\OllamaService;
+use App\Services\PipelineService;
 use Illuminate\Support\Facades\Queue;
 use Mockery;
 use Tests\TestCase;
@@ -148,8 +149,12 @@ class CronJobSchedulerTest extends TestCase
         );
         $this->app->instance(AgentExecutor::class, $executorMock);
 
+        // Mock PipelineService（handle() 签名新增了此参数）
+        $pipelineMock = Mockery::mock(PipelineService::class);
+        $this->app->instance(PipelineService::class, $pipelineMock);
+
         $job = new ExecuteCronJob($cronJob->id);
-        $job->handle($executorMock);
+        $job->handle($executorMock, $pipelineMock);
 
         $this->assertDatabaseHas('cron_job_logs', [
             'cronjob_id' => $cronJob->id,
@@ -182,8 +187,12 @@ class CronJobSchedulerTest extends TestCase
         $executorMock->shouldReceive('execute')->once()->andThrow(new \RuntimeException('Ollama不可用'));
         $this->app->instance(AgentExecutor::class, $executorMock);
 
+        // Mock PipelineService
+        $pipelineMock = Mockery::mock(PipelineService::class);
+        $this->app->instance(PipelineService::class, $pipelineMock);
+
         $job = new ExecuteCronJob($cronJob->id);
-        $job->handle($executorMock);
+        $job->handle($executorMock, $pipelineMock);
 
         $this->assertDatabaseHas('cron_job_logs', [
             'cronjob_id' => $cronJob->id,
