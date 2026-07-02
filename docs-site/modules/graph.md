@@ -15,11 +15,23 @@ Agent 的增删改操作会自动同步到知识图谱：
 ```
 Agent 创建 → 图谱节点 + 技能节点 + 协作边
 Agent 更新 → 节点信息更新 + 技能刷新
-Agent 删除 → 节点清理 + 孤立技能清理
+Agent 软删除 → 图谱节点清理 + 孤立技能清理  ← v0.4.1 修复
+Agent 恢复   → 图谱节点重建 + 技能重建      ← v0.4.1 新增
+Agent 硬删除 → 图谱节点清理 + 孤立技能清理
 parent_id 变动 → 父子关系重建 + 协作边重建
 ```
 
+> ⚠️ **注意**：软删除通过 `is_deleted=true → save()` 实现，触发的是 `updated` 事件而非 `deleted` 事件。恢复同理。
+
 **实现文件：** `app/Observers/AgentGraphObserver.php`
+
+**关键方法：**
+| 方法 | 触发时机 | 行为 |
+|------|----------|------|
+| `created()` | Agent 新建 / 恢复 | 创建图谱节点 + 技能 + 协作边 |
+| `updated()` | Agent 更新 / 软删除 / 恢复 | 检测 `is_deleted` 变化，软删→清理，恢复→重建 |
+| `deleted()` | 硬删除 | 委托 `removeGraphNodes()` |
+| `removeGraphNodes()` | 软/硬删除共用 | ①查技能边→②删边→③清孤立技能→④删节点 |
 
 **注册位置：** `app/Providers/AppServiceProvider.php` → `boot()` 方法
 

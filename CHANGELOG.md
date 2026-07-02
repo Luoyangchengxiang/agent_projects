@@ -4,6 +4,33 @@
 
 ---
 
+## [0.4.1] - 2026-07-03
+
+### 🐛 Bug 修复
+
+- **软删除 Agent 后知识图谱节点残留**
+  - 根因：Agent 使用手动软删除（`is_deleted=true → save()`），只触发 `updated` 事件，`Observer.deleted()` 仅在硬删除时激活
+  - 修复：`AgentGraphObserver.updated()` 新增 `is_deleted` 变化检测，软删除触发图谱清理（`removeGraphNodes()`），恢复触发重建（`created()`）
+  - 修复：`removeGraphNodes()` 调整执行顺序为 ①查技能边→②删边→③清孤立技能→④删节点，修复技能节点永远不清理的 bug
+  - 修复：`AgentController.destroy()`/`restore()` 组删除/恢复改为逐个调用 `softDelete()`/`restore()`，确保触发 Observer
+
+- **CI 测试卡死 23 分钟**
+  - 根因：`ExecuteCronJob::handle()` 签名新增 `PipelineService` 参数后，`CronJobSchedulerTest` 两处测试仍只传 1 个参数，导致 `ArgumentCountError` 中断数据库事务不释放，后续 94 个测试的 `cleanTables()` 排队等 PostgreSQL 锁
+  - 修复：`CronJobSchedulerTest` 添加 `PipelineService` import 和 mock
+
+### 🔧 数据库清理
+
+- 清理 2 个已删除 Agent 在图谱中的残留节点
+- 清理 2 个孤立技能节点（因历史 bug 未清理）
+
+### 📚 文档
+
+- 知识图谱文档更新：软删除/恢复自动同步机制说明 + Observer 方法表
+- API 文档更新：删除/恢复的图谱联动说明
+- 新增 CHANGELOG.md
+
+---
+
 ## [0.4.0] - 2026-07-01
 
 ### ✨ 新功能
