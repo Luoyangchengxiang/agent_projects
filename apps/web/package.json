@@ -17,6 +17,7 @@
     "@ant-design/icons": "^6.2.5",
     "@antv/g6": "^5.1.1",
     "@tanstack/react-query": "^5.0.0",
+    "@xyflow/react": "^12.11.1",
     "antd": "^5.0.0",
     "axios": "^1.0.0",
     "dayjs": "^1.11.0",

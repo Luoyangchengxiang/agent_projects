@@ -151,13 +151,13 @@ PROMPT;
     public function chatWithModel(array $messages, string $modelName): ?string
     {
         try {
-            $response = Http::timeout(60)->post("{$this->baseUrl}/api/chat", [
+            $response = Http::timeout(300)->post("{$this->baseUrl}/api/chat", [
                 'model' => $modelName,
                 'messages' => $messages,
                 'stream' => false,
                 'options' => [
                     'temperature' => 0.7,
-                    'num_predict' => 1024,
+                    'num_predict' => 512, // 限制输出长度，加快响应
                 ],
             ]);
 

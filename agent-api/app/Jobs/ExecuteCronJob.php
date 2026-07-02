@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\CronJob;
 use App\Models\CronJobLog;
 use App\Services\AgentExecutor;
+use App\Services\PipelineService;
 use App\Models\Agent;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -30,7 +31,7 @@ class ExecuteCronJob implements ShouldQueue
         public bool $isManual = false
     ) {}
 
-    public function handle(AgentExecutor $executor): void
+    public function handle(AgentExecutor $executor, PipelineService $pipeline): void
     {
         $cronJob = CronJob::find($this->cronJobId);
 
@@ -52,43 +53,15 @@ class ExecuteCronJob implements ShouldQueue
         ]);
 
         try {
-            // 获取关联的 Agent（从 config 中取 agent_id，或使用默认 Agent）
-            $agentId = $cronJob->config['agent_id'] ?? null;
-            $agent = $agentId ? Agent::find($agentId) : Agent::first();
+            // 检查是否为流水线模式
+            $mode = $cronJob->config['mode'] ?? 'single';
 
-            if (!$agent) {
-                throw new \RuntimeException('没有可用的 Agent');
-            }
-
-            // 构建输入
-            $input = $cronJob->prompt ?? $cronJob->name;
-            $context = [
-                'source' => 'cronjob',
-                'cronjob_id' => $cronJob->id,
-                'cronjob_name' => $cronJob->name,
-                'is_manual' => $this->isManual,
-            ];
-
-            // 执行任务
-            $executionLog = $executor->execute($agent, $input, $context);
-            $duration = (int) ((microtime(true) - $startTime) * 1000);
-
-            if ($executionLog->status === 'success') {
-                // 记录成功日志
-                CronJobLog::create([
-                    'cronjob_id' => $cronJob->id,
-                    'status' => 'success',
-                    'output' => $executionLog->output,
-                    'duration' => $duration,
-                ]);
-
-                $cronJob->markSuccess();
-
-                Log::info("CronJob #{$cronJob->id} 执行成功", [
-                    'duration' => $duration . 'ms',
-                ]);
+            if ($mode === 'pipeline') {
+                // 流水线模式：执行完整协作流程
+                $this->executePipeline($cronJob, $pipeline, $startTime);
             } else {
-                throw new \RuntimeException($executionLog->error ?? '执行失败');
+                // 单Agent模式：原有逻辑
+                $this->executeSingle($cronJob, $executor, $startTime);
             }
 
         } catch (\Exception $e) {
@@ -108,6 +81,79 @@ class ExecuteCronJob implements ShouldQueue
                 'error' => $e->getMessage(),
                 'duration' => $duration . 'ms',
             ]);
+        }
+    }
+
+    /**
+     * 单Agent模式执行
+     */
+    private function executeSingle(CronJob $cronJob, AgentExecutor $executor, float $startTime): void
+    {
+        $agentId = $cronJob->config['agent_id'] ?? null;
+        $agent = $agentId ? Agent::find($agentId) : Agent::first();
+
+        if (!$agent) {
+            throw new \RuntimeException('没有可用的 Agent');
+        }
+
+        $input = $cronJob->prompt ?? $cronJob->name;
+        $context = [
+            'source' => 'cronjob',
+            'cronjob_id' => $cronJob->id,
+            'cronjob_name' => $cronJob->name,
+            'is_manual' => $this->isManual,
+        ];
+
+        $executionLog = $executor->execute($agent, $input, $context);
+        $duration = (int) ((microtime(true) - $startTime) * 1000);
+
+        if ($executionLog->status === 'success') {
+            CronJobLog::create([
+                'cronjob_id' => $cronJob->id,
+                'status' => 'success',
+                'output' => $executionLog->output,
+                'duration' => $duration,
+            ]);
+
+            $cronJob->markSuccess();
+
+            Log::info("CronJob #{$cronJob->id} 执行成功", [
+                'duration' => $duration . 'ms',
+            ]);
+        } else {
+            throw new \RuntimeException($executionLog->error ?? '执行失败');
+        }
+    }
+
+    /**
+     * 流水线模式执行
+     */
+    private function executePipeline(CronJob $cronJob, PipelineService $pipeline, float $startTime): void
+    {
+        $topic = $cronJob->prompt ?? $cronJob->name;
+
+        Log::info("CronJob #{$cronJob->id} 启动流水线模式", ['topic' => $topic]);
+
+        $result = $pipeline->run($topic);
+        $duration = (int) ((microtime(true) - $startTime) * 1000);
+
+        if ($result['success']) {
+            // 记录成功日志
+            CronJobLog::create([
+                'cronjob_id' => $cronJob->id,
+                'status' => 'success',
+                'output' => $result['summary'] ?? '流水线执行完成',
+                'duration' => $duration,
+            ]);
+
+            $cronJob->markSuccess();
+
+            Log::info("CronJob #{$cronJob->id} 流水线执行成功", [
+                'pipeline_id' => $result['pipeline_id'],
+                'duration' => $duration . 'ms',
+            ]);
+        } else {
+            throw new \RuntimeException($result['error'] ?? '流水线执行失败');
         }
     }
 }

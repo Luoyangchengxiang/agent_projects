@@ -48,9 +48,10 @@ class AgentController extends Controller
             return $this->getTree($query, $request);
         }
 
-        // 排序
-        $sortBy = $request->get('sort_by', 'created_at');
-        $sortOrder = $request->get('sort_order', 'desc');
+        // 排序（白名单验证防止SQL注入）
+        $allowedSorts = ['id', 'name', 'type', 'status', 'created_at', 'updated_at'];
+        $sortBy = in_array($request->get('sort_by'), $allowedSorts) ? $request->get('sort_by') : 'created_at';
+        $sortOrder = in_array($request->get('sort_order'), ['asc', 'desc']) ? $request->get('sort_order') : 'desc';
         $query->orderBy($sortBy, $sortOrder);
 
         // 分页
@@ -93,6 +94,7 @@ class AgentController extends Controller
                 'executor_type' => $agent->executor_type,
                 'model' => $agent->model,
                 'system_prompt' => $agent->system_prompt,
+                'execution_strategy' => $agent->execution_strategy,
                 'is_group' => $agent->activeChildren->count() > 0,
                 'children' => $agent->activeChildren->map(function ($child) {
                     return [
@@ -133,6 +135,7 @@ class AgentController extends Controller
             'system_prompt' => 'nullable|string|max:2000',
             'config' => 'nullable|array',
             'metadata' => 'nullable|array',
+            'execution_strategy' => 'nullable|array',
         ]);
 
         $validated['status'] = 'offline';
@@ -179,6 +182,7 @@ class AgentController extends Controller
             'system_prompt' => 'nullable|string|max:2000',
             'config' => 'nullable|array',
             'metadata' => 'nullable|array',
+            'execution_strategy' => 'nullable|array',
         ]);
 
         $agent->update($validated);

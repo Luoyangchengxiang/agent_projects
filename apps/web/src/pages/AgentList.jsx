@@ -15,10 +15,12 @@ import {
   TeamOutlined,
   UserOutlined,
   RobotOutlined,
-  SyncOutlined
+  SyncOutlined,
+  BranchesOutlined
 } from '@ant-design/icons'
 import { Table, Tag, Button, Input, Space, App, Modal, Form, Select, Tooltip, Typography, Descriptions } from 'antd'
 import { agentApi } from '@agent-monitor/api'
+import ExecutionStrategyEditor from '../components/ExecutionStrategyEditor'
 
 const { Title } = Typography
 
@@ -46,6 +48,9 @@ function AgentList() {
   const [runInput, setRunInput] = useState('')
   const [runLoading, setRunLoading] = useState(false)
   const [runResult, setRunResult] = useState(null)
+
+  // 执行策略状态
+  const [executionStrategy, setExecutionStrategy] = useState(null)
 
   useEffect(() => {
     // 获取用户信息（注意：API用的key是auth_user）
@@ -104,6 +109,10 @@ function AgentList() {
       model: record.model || record.config?.model || '',
       prompt: record.system_prompt || record.config?.prompt || '',
     })
+    // 加载执行策略（仅组）
+    if (record.is_group) {
+      setExecutionStrategy(record.execution_strategy || null)
+    }
     setEditVisible(true)
   }
 
@@ -112,12 +121,20 @@ function AgentList() {
     try {
       const values = await form.validateFields()
       setSubmitting(true)
-      await agentApi.update(currentAgent.id, {
+      
+      const updateData = {
         name: values.name,
         type: values.type,
         model: values.model,
         system_prompt: values.prompt,
-      })
+      }
+      
+      // 如果是组，添加执行策略
+      if (currentAgent.is_group) {
+        updateData.execution_strategy = executionStrategy
+      }
+      
+      await agentApi.update(currentAgent.id, updateData)
       message.success('更新成功')
       setEditVisible(false)
       loadAgents()
@@ -579,7 +596,7 @@ function AgentList() {
         open={viewVisible}
         onCancel={() => setViewVisible(false)}
         footer={null}
-        width={600}
+        width={currentAgent?.is_group && currentAgent?.execution_strategy ? 800 : 600}
       >
         {currentAgent && (
           <div>
@@ -700,37 +717,72 @@ function AgentList() {
                 />
               </div>
             )}
+
+            {/* 执行策略（仅组） */}
+            {currentAgent.is_group && currentAgent.execution_strategy && (
+              <div style={{ marginTop: 16 }}>
+                <div style={{ marginBottom: 8, fontWeight: 500 }}>
+                  <Space>
+                    <BranchesOutlined />
+                    执行策略
+                  </Space>
+                </div>
+                <ExecutionStrategyEditor
+                  value={currentAgent.execution_strategy}
+                  agents={currentAgent.children || []}
+                  readOnly={true}
+                />
+              </div>
+            )}
           </div>
         )}
       </Modal>
 
       {/* 编辑弹框 */}
       <Modal
-        title="编辑 Agent"
+        title={currentAgent?.is_group ? "编辑团队" : "编辑 Agent"}
         open={editVisible}
         onCancel={() => setEditVisible(false)}
         onOk={handleEditSubmit}
         confirmLoading={submitting}
         okText="保存"
         cancelText="取消"
+        width={currentAgent?.is_group ? 800 : 520}
       >
         <Form form={form} layout="vertical">
           <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入名称' }]}>
             <Input />
           </Form.Item>
           <Form.Item name="type" label="类型" rules={[{ required: true, message: '请选择类型' }]}>
-            <Select>
+            <Select disabled={currentAgent?.is_group}>
               <Select.Option value="local">本地</Select.Option>
               <Select.Option value="online">线上</Select.Option>
               <Select.Option value="team">团队</Select.Option>
             </Select>
           </Form.Item>
-          <Form.Item name="model" label="模型">
-            <Input placeholder="如 qwen2.5:3b" />
-          </Form.Item>
-          <Form.Item name="prompt" label="系统提示词">
-            <Input.TextArea rows={4} />
-          </Form.Item>
+          
+          {/* 非组显示模型和提示词 */}
+          {!currentAgent?.is_group && (
+            <>
+              <Form.Item name="model" label="模型">
+                <Input placeholder="如 qwen2.5:3b" />
+              </Form.Item>
+              <Form.Item name="prompt" label="系统提示词">
+                <Input.TextArea rows={4} />
+              </Form.Item>
+            </>
+          )}
+          
+          {/* 组显示执行策略 */}
+          {currentAgent?.is_group && (
+            <Form.Item label="执行策略">
+              <ExecutionStrategyEditor
+                value={executionStrategy}
+                onChange={setExecutionStrategy}
+                agents={currentAgent?.children || []}
+              />
+            </Form.Item>
+          )}
         </Form>
       </Modal>
 
