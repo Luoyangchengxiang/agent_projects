@@ -215,12 +215,11 @@ class AgentController extends Controller
             ], 403);
         }
 
-        // 如果是组，同时逻辑删除所有子级
+        // 如果是组，同时逻辑删除所有子级（逐个调用以触发 Observer）
         if ($agent->isGroup()) {
-            $agent->children()->active()->update([
-                'is_deleted' => true,
-                'deleted_at' => now(),
-            ]);
+            foreach ($agent->children()->active()->get() as $child) {
+                $child->softDelete();
+            }
         }
 
         $agent->softDelete();
@@ -245,12 +244,11 @@ class AgentController extends Controller
             ], 403);
         }
 
-        // 如果是组，同时恢复所有子级
+        // 如果是组，同时恢复所有子级（逐个调用以触发 Observer）
         if ($agent->children()->count() > 0) {
-            $agent->children()->deleted()->update([
-                'is_deleted' => false,
-                'deleted_at' => null,
-            ]);
+            foreach ($agent->children()->onlyDeleted()->get() as $child) {
+                $child->restore();
+            }
         }
 
         $agent->restore();

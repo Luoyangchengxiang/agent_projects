@@ -76,9 +76,22 @@ class AgentGraphObserver
 
     /**
      * Agent 更新时 → 同步更新图谱节点 + 技能
+     * 也处理软删除/恢复
      */
     public function updated(Agent $agent): void
     {
+        // 软删除：清理图谱节点
+        if ($agent->wasChanged('is_deleted') && $agent->is_deleted) {
+            $this->removeGraphNodes($agent);
+            return;
+        }
+
+        // 恢复：重建图谱节点
+        if ($agent->wasChanged('is_deleted') && !$agent->is_deleted) {
+            $this->created($agent);
+            return;
+        }
+
         try {
             $node = GraphNode::where('agent_id', $agent->id)->first();
             if (!$node) return;
@@ -110,9 +123,17 @@ class AgentGraphObserver
     }
 
     /**
-     * Agent 删除时 → 删除图谱节点和相关边
+     * Agent 删除时 → 删除图谱节点和相关边（硬删除）
      */
     public function deleted(Agent $agent): void
+    {
+        $this->removeGraphNodes($agent);
+    }
+
+    /**
+     * 移除 Agent 的图谱节点和相关边（软/硬删除共用）
+     */
+    private function removeGraphNodes(Agent $agent): void
     {
         try {
             $node = GraphNode::where('agent_id', $agent->id)->first();
@@ -137,9 +158,9 @@ class AgentGraphObserver
 
             $node->delete();
 
-            Log::info("[图谱同步] Agent 删除: {$agent->name} (ID: {$agent->id})");
+            Log::info("[图谱同步] Agent 图谱节点已移除: {$agent->name} (ID: {$agent->id})");
         } catch (\Exception $e) {
-            Log::error("[图谱同步] Agent 删除同步失败: {$e->getMessage()}");
+            Log::error("[图谱同步] Agent 图谱节点移除失败: {$e->getMessage()}");
         }
     }
 
