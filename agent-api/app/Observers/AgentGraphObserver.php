@@ -139,14 +139,16 @@ class AgentGraphObserver
             $node = GraphNode::where('agent_id', $agent->id)->first();
             if (!$node) return;
 
-            // 删除该节点相关的所有边
-            GraphEdge::where('source_id', $node->id)->delete();
-            GraphEdge::where('target_id', $node->id)->delete();
-
-            // 删除孤立的技能节点（只有该 Agent 引用的技能）
+            // 1. 先查技能边（在删除之前，否则查不到）
             $skillEdges = GraphEdge::where('source_id', $node->id)
                 ->where('relation_type', 'uses')
                 ->get();
+
+            // 2. 删除该节点相关的所有边
+            GraphEdge::where('source_id', $node->id)->delete();
+            GraphEdge::where('target_id', $node->id)->delete();
+
+            // 3. 清理孤立技能节点（删除边之后再删节点）
             foreach ($skillEdges as $edge) {
                 $otherEdges = GraphEdge::where('target_id', $edge->target_id)
                     ->where('source_id', '!=', $node->id)
@@ -156,6 +158,7 @@ class AgentGraphObserver
                 }
             }
 
+            // 4. 删除 Agent 图谱节点
             $node->delete();
 
             Log::info("[图谱同步] Agent 图谱节点已移除: {$agent->name} (ID: {$agent->id})");
